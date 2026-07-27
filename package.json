@@ -11,6 +11,7 @@
     "format": "prettier --write \"src/**/*.{vue,ts,tsx,css}\""
   },
   "dependencies": {
+    "dexie": "^4.4.4",
     "element-plus": "^2.14.3",
     "pinia": "^4.0.2",
     "vue": "^3.5.39",

@@ -10,3 +10,15 @@ export interface Book {
   name: string
   subject: string
 }
+
+/** 方案 */
+export interface Plan {
+  id?: number
+  name: string
+  subject: string
+  book: string
+  usedQuestions: string[]
+  paperIds: string[]
+  createdAt: string
+  updatedAt: string
+}
