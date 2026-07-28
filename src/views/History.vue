@@ -6,6 +6,7 @@ import { usePlanStore } from '@/stores/plan'
 import { usePaperStore } from '@/stores/paper'
 import { useQuestionBank } from '@/composables/useQuestionBank'
 import { downloadPdf, previewPdf } from '@/utils/pdfGenerator'
+import { renderQuestionContent } from '@/utils/contentRender'
 import type { Paper, Plan, Question } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { ElMessage } from 'element-plus'
@@ -182,7 +183,7 @@ function formatDate(iso: string) {
                 第{{ idx + 1 }}题
                 <span class="dq-source">{{ q.sectionName }} → 第{{ q.chapter }}章 → 第{{ q.questionNumber }}题</span>
               </p>
-              <div class="dq-content">{{ q.content }}</div>
+              <div class="dq-content">{{ renderQuestionContent(q.content) }}</div>
             </div>
           </div>
         </template>

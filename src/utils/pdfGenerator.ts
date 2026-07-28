@@ -1,8 +1,9 @@
 /**
- * PDF 生成器 - 全面优化版
- * - 公式渲染：LaTeX → 可读文本
- * - 排版优化：层次分明、间距合理
- * - 字体：多 CDN 自动容错
+ * PDF 生成器 v2
+ * - 中文字体：多 CDN 容错（思源黑体已验证可用）
+ * - 公式渲染：LaTeX/PUA 字符→可读文本
+ * - 自动分页，智能换行
+ * - 题目来源标注，题型分区
  */
 
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
@@ -19,11 +20,15 @@ export interface PdfOptions {
   sourceMode: 'chapter' | 'page'
 }
 
-// ─── 字体 ───────────────────────────────────────────────
+// ─── 字体 ──────────────────────────────────────────────
 
+/** 按优先级排列的字体 CDN URL */
 const FONT_URLS = [
-  'https://cdn.jsdelivr.net/gh/nicktoump/Noto-Sans-CJK-SC@master/NotoSansCJKsc-Regular.ttf',
-  'https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/zh-Hans-CN/NotoSansCJKsc-Regular.otf',
+  // ① 思源黑体 (Adobe 官方 jsDelivr 镜像) — 已验证可用
+  'https://cdn.jsdelivr.net/gh/adobe-fonts/source-han-sans@release/SubsetOTF/CN/SourceHanSansCN-Regular.otf',
+  // ② SourceHanSansCN-Regular.otf (cnpmjs 镜像)
+  'https://cdn.jsdelivr.net/gh/niutech/Source-Han-Sans@gh-pages/SubsetOTF/CN/SourceHanSansCN-Regular.otf',
+  // ③ 备用：unpkg noto-sans-cjk-sc
   'https://unpkg.com/noto-sans-cjk-sc-regular@1.0.0/NotoSansCJKsc-Regular.ttf',
 ]
 
@@ -35,7 +40,9 @@ async function tryFetchUrl(url: string): Promise<Uint8Array | null> {
     const res = await fetch(url, { signal: AbortSignal.timeout(12000) })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return new Uint8Array(await res.arrayBuffer())
-  } catch { return null }
+  } catch {
+    return null
+  }
 }
 
 async function getFontBytes(): Promise<Uint8Array | null> {
@@ -44,119 +51,90 @@ async function getFontBytes(): Promise<Uint8Array | null> {
   pending = (async () => {
     for (const url of FONT_URLS) {
       const bytes = await tryFetchUrl(url)
-      if (bytes) { fontCache = bytes; return bytes }
+      if (bytes && bytes.length > 1000) {
+        fontCache = bytes
+        return bytes
+      }
     }
     return null
   })()
   return pending
 }
 
-// ─── LaTeX → 纯文本 ─────────────────────────────────────
+// ─── 渲染清洗 ──────────────────────────────────────────
 
-function latexToText(raw: string): string {
+/** 浏览器端渲染用：去除残留 PUA */
+function renderText(raw: string): string {
+  if (!raw) return ''
   return raw
-    // 去除 $$...$$
-    .replace(/\$\$([^$]+)\$\$/g, (_, m) => mathToText(m))
-    // 去除 $...$
-    .replace(/\$([^$]+)\$/g, (_, m) => mathToText(m))
-    // 去除乱码字符
-    .replace(/[░■▀﹡￥◆◇□○●★＃＆∗]/g, '')
-    .replace(/[░■▁￥]/g, '')
+    // PUA 字符 → 标准符号
+    .replace(/\u{F0EE}/g, '(')         //  → (
+    .replace(/\u{F0ED}\u{F0EA}/g, '[') // 或 → [
+    .replace(/\u{F0CB}/g, '[')         //  → [
+    .replace(/\u{F0EC}/g, '(')         //  → (
+    .replace(/\u{F0EB}/g, ')')         //  → )
+    .replace(/\u{F0F4}|\u{F0F6}|\u{F0E2}/g, '|') //  → |
+    .replace(/\u{F0B6}/g, '∫')         //  → ∫
+    .replace(/\u{F0B1}/g, '∑')         //  → ∑
+    .replace(/\u{F0E8}|\u{F0E0}|\u{F0E3}/g, '{') // 花括号开
+    .replace(/\u{F0E9}|\u{F0E1}|\u{F0E4}/g, '}') // 花括号闭
+    .replace(/\u{F0DC}/g, '[')         //  → [
+    .replace(/\u{F0B7}/g, '·')         //  → ·
+    .replace(/\u{F092}/g, '→')          //  → →
+    // 删除垃圾字符
+    .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/g, '')
     .trim()
 }
 
-function mathToText(expr: string): string {
-  let s = expr.trim()
+/** PDF 内用：进一步做公式本地化渲染 */
+function latexToText(raw: string): string {
+  let s = renderText(raw)
   // 分式 \frac{a}{b}
   s = s.replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1)/($2)')
-  // 上标 ^{...}
+  // 上标/下标
   s = s.replace(/\^\{([^}]*)\}/g, '^$1')
-  // 下标 _{...}
   s = s.replace(/\_\{([^}]*)\}/g, '_$1')
-  // 上标单个字符 ^x
   s = s.replace(/\^([a-zA-Z0-9])/g, '^$1')
-  // 下标单个字符 _x
   s = s.replace(/_([a-zA-Z0-9])/g, '_$1')
-  // 根号 \sqrt{...}
+  // 根号
   s = s.replace(/\\sqrt(?:\[([^\]]*)\])?\{([^}]*)\}/g, '√($2)')
-  // 极限 \lim_{...}
+  // 极限
   s = s.replace(/\\lim_?\{?([^}]*)\}?/g, 'lim($1)')
-  // 积分 \int
+  // 积分/求和
   s = s.replace(/\\int/g, '∫')
-  // 求和 \sum
   s = s.replace(/\\sum/g, '∑')
   // 三角函数
-  s = s.replace(/\\sin/g, 'sin')
-  s = s.replace(/\\cos/g, 'cos')
-  s = s.replace(/\\tan/g, 'tan')
-  s = s.replace(/\\cot/g, 'cot')
-  s = s.replace(/\\sec/g, 'sec')
-  s = s.replace(/\\csc/g, 'csc')
-  s = s.replace(/\\arcsin/g, 'arcsin')
-  s = s.replace(/\\arccos/g, 'arccos')
-  s = s.replace(/\\arctan/g, 'arctan')
-  // ln, lg, log
-  s = s.replace(/\\ln/g, 'ln')
-  s = s.replace(/\\lg/g, 'lg')
-  s = s.replace(/\\log/g, 'log')
+  s = s.replace(/\\(sin|cos|tan|cot|sec|csc)/g, '$1')
+  s = s.replace(/\\(arcsin|arccos|arctan)/g, '$1')
+  s = s.replace(/\\(ln|lg|log)/g, '$1')
   // 希腊字母
-  s = s.replace(/\\alpha/g, 'α')
-  s = s.replace(/\\beta/g, 'β')
-  s = s.replace(/\\gamma/g, 'γ')
-  s = s.replace(/\\delta/g, 'δ')
-  s = s.replace(/\\epsilon/g, 'ε')
-  s = s.replace(/\\zeta/g, 'ζ')
-  s = s.replace(/\\eta/g, 'η')
-  s = s.replace(/\\theta/g, 'θ')
-  s = s.replace(/\\iota/g, 'ι')
-  s = s.replace(/\\kappa/g, 'κ')
-  s = s.replace(/\\lambda/g, 'λ')
-  s = s.replace(/\\mu/g, 'μ')
-  s = s.replace(/\\nu/g, 'ν')
-  s = s.replace(/\\xi/g, 'ξ')
-  s = s.replace(/\\pi/g, 'π')
-  s = s.replace(/\\rho/g, 'ρ')
-  s = s.replace(/\\sigma/g, 'σ')
-  s = s.replace(/\\tau/g, 'τ')
-  s = s.replace(/\\upsilon/g, 'υ')
-  s = s.replace(/\\phi/g, 'φ')
-  s = s.replace(/\\chi/g, 'χ')
-  s = s.replace(/\\psi/g, 'ψ')
-  s = s.replace(/\\omega/g, 'ω')
-  s = s.replace(/\\infty/g, '∞')
-  s = s.replace(/\\to/g, '→')
-  s = s.replace(/\\rightarrow/g, '→')
-  s = s.replace(/\\leftarrow/g, '←')
-  s = s.replace(/\\partial/g, '∂')
-  s = s.replace(/\\cdot/g, '·')
-  s = s.replace(/\\cdots/g, '…')
-  s = s.replace(/\\vdots/g, '⋮')
-  s = s.replace(/\\ddots/g, '⋱')
-  s = s.replace(/\\neq/g, '≠')
-  s = s.replace(/\\geq/g, '≥')
-  s = s.replace(/\\leq/g, '≤')
-  s = s.replace(/\\approx/g, '≈')
-  s = s.replace(/\\times/g, '×')
-  s = s.replace(/\\div/g, '÷')
-  s = s.replace(/\\pm/g, '±')
-  s = s.replace(/\\mp/g, '∓')
-  s = s.replace(/\\cdot/g, '·')
-  s = s.replace(/\\circ/g, '°')
-  // 括号
-  s = s.replace(/\\\{/g, '{')
-  s = s.replace(/\\\}/g, '}')
-  s = s.replace(/\\\(/g, '(')
-  s = s.replace(/\\\)/g, ')')
-  s = s.replace(/\\\[/g, '[')
-  s = s.replace(/\\\]/g, ']')
-  // 去除残留反斜杠
+  s = s.replace(/\\alpha/g, 'α').replace(/\\beta/g, 'β').replace(/\\gamma/g, 'γ')
+  s = s.replace(/\\delta/g, 'δ').replace(/\\epsilon/g, 'ε').replace(/\\zeta/g, 'ζ')
+  s = s.replace(/\\eta/g, 'η').replace(/\\theta/g, 'θ').replace(/\\iota/g, 'ι')
+  s = s.replace(/\\kappa/g, 'κ').replace(/\\lambda/g, 'λ').replace(/\\mu/g, 'μ')
+  s = s.replace(/\\nu/g, 'ν').replace(/\\xi/g, 'ξ').replace(/\\pi/g, 'π')
+  s = s.replace(/\\rho/g, 'ρ').replace(/\\sigma/g, 'σ').replace(/\\tau/g, 'τ')
+  s = s.replace(/\\upsilon/g, 'υ').replace(/\\phi/g, 'φ').replace(/\\chi/g, 'χ')
+  s = s.replace(/\\psi/g, 'ψ').replace(/\\omega/g, 'ω')
+  // 数学符号
+  s = s.replace(/\\infty/g, '∞').replace(/\\to/g, '→').replace(/\\rightarrow/g, '→')
+  s = s.replace(/\\leftarrow/g, '←').replace(/\\partial/g, '∂')
+  s = s.replace(/\\cdots/g, '…').replace(/\\vdots/g, '⋮').replace(/\\ddots/g, '⋱')
+  s = s.replace(/\\neq/g, '≠').replace(/\\geq/g, '≥').replace(/\\leq/g, '≤')
+  s = s.replace(/\\approx/g, '≈').replace(/\\times/g, '×').replace(/\\div/g, '÷')
+  s = s.replace(/\\pm/g, '±').replace(/\\mp/g, '∓').replace(/\\circ/g, '°')
+  // 花括号转义
+  s = s.replace(/\\\{/g, '{').replace(/\\\}/g, '}')
+  s = s.replace(/\\\(/g, '(').replace(/\\\)/g, ')')
+  s = s.replace(/\\\[/g, '[').replace(/\\\]/g, ']')
+  // 残留反斜杠
   s = s.replace(/\\([a-zA-Z]+)/g, '$1')
-  // 合并多余空格
+  // 合并空格
   s = s.replace(/\s+/g, ' ')
-  return s
+  return s.trim()
 }
 
-// ─── 排版核心 ──────────────────────────────────────────
+// ─── 布局引擎 ──────────────────────────────────────────
 
 interface LayoutOpts {
   font: PDFFont
@@ -174,32 +152,49 @@ class PdfLayout {
   y!: number
   pageNum = 1
   readonly usableW: number
+  readonly margin: number
 
   constructor(doc: PDFDocument, opts: LayoutOpts) {
     this.doc = doc
     this.opts = opts
     this.usableW = opts.pageWidth - 2 * opts.margin
-    this.newPage()
+    this.margin = opts.margin
+    this._addPage()
   }
 
-  newPage() {
+  private _addPage() {
     this.page = this.doc.addPage([this.opts.pageWidth, this.opts.pageHeight])
     this.y = this.opts.pageHeight - this.opts.margin
     this.pageNum++
+    // 页眉页脚
+    this._drawFooter()
+  }
+
+  private _drawFooter() {
+    const text = `— ${this.pageNum} —`
+    const f = this.opts.font
+    const tw = f.widthOfTextAtSize(text, 8)
+    this.page.drawText(text, {
+      x: (this.opts.pageWidth - tw) / 2,
+      y: 20,
+      font: f,
+      size: 8,
+      color: rgb(0.65, 0.65, 0.65),
+    })
   }
 
   get font() { return this.opts.font }
   get bold() { return this.opts.boldFont }
 
-  /** Draw a line of text, returning the y after drawing */
+  /** 单行文本 */
   draw(text: string, size = 10, bold = false, indent = 0): void {
     const f = bold ? this.bold : this.font
-    const x = this.opts.margin + indent
+    const x = this.margin + indent
     this.page.drawText(text, { x, y: this.y, font: f, size, color: rgb(0, 0, 0) })
     this.y -= size + 2
   }
 
-  /** Draw centered text */
+  /** 居中 */
   drawCenter(text: string, size = 10, bold = false): void {
     const f = bold ? this.bold : this.font
     const tw = f.widthOfTextAtSize(text, size)
@@ -208,50 +203,52 @@ class PdfLayout {
     this.y -= size + 2
   }
 
-  /** Draw wrapped text, auto new-page */
+  /** 自动换行文本 */
   drawWrap(text: string, size = 10, bold = false, indent = 0): void {
     const f = bold ? this.bold : this.font
     const maxW = this.usableW - indent
     const lineH = size + 3
-    const words = text.split(/(?<=[一-鿿])|(?=[一-鿿])|(?<=\s)|(?=\s)/)
-
-    let line = ''
-    for (const w of words) {
-      const testL = line + w
-      const tw = f.widthOfTextAtSize(testL, size)
-      if (tw > maxW && line) {
-        if (this.y < this.opts.margin + lineH) this.newPage()
-        this.page.drawText(line, { x: this.opts.margin + indent, y: this.y, font: f, size, color: rgb(0, 0, 0) })
+    const chars = [...text]
+    let buf = ''
+    for (const ch of chars) {
+      const testW = f.widthOfTextAtSize(buf + ch, size)
+      if (testW > maxW && buf) {
+        this._ensureLine(lineH)
+        this.page.drawText(buf, { x: this.margin + indent, y: this.y, font: f, size, color: rgb(0, 0, 0) })
         this.y -= lineH
-        line = w
+        buf = ch
       } else {
-        line = testL
+        buf += ch
       }
     }
-    if (line) {
-      if (this.y < this.opts.margin + lineH) this.newPage()
-      this.page.drawText(line, { x: this.opts.margin + indent, y: this.y, font: f, size, color: rgb(0, 0, 0) })
+    if (buf) {
+      this._ensureLine(lineH)
+      this.page.drawText(buf, { x: this.margin + indent, y: this.y, font: f, size, color: rgb(0, 0, 0) })
       this.y -= lineH
     }
   }
 
-  /** Draw a horizontal line separator */
+  private _ensureLine(h: number) {
+    if (this.y < this.margin + h) this._addPage()
+  }
+
+  /** 确保至少 h 空白 */
+  ensure(h: number) {
+    if (this.y < this.margin + h) this._addPage()
+  }
+
+  /** 分隔线 */
   drawHr() {
-    const y = this.y
     this.page.drawLine({
-      start: { x: this.opts.margin, y },
-      end: { x: this.opts.pageWidth - this.opts.margin, y },
-      thickness: 1,
-      color: rgb(0.7, 0.7, 0.7),
+      start: { x: this.margin, y: this.y },
+      end: { x: this.opts.pageWidth - this.margin, y: this.y },
+      thickness: 0.8,
+      color: rgb(0.75, 0.75, 0.75),
     })
-    this.y -= 8
+    this.y -= 10
   }
 
   space(h = 6) { this.y -= h }
-
-  ensure(h: number) {
-    if (this.y < this.opts.margin + h) this.newPage()
-  }
 }
 
 // ─── 构建 PDF ──────────────────────────────────────────
@@ -267,44 +264,41 @@ async function buildPdfDoc(
 
   let font: PDFFont
   let boldFont: PDFFont
+  let hasCJK = false
+
   if (fontBytes) {
+    // 中文字体嵌入
     font = await doc.embedFont(fontBytes)
     boldFont = font
+    hasCJK = true
   } else {
+    // 回退：仅英文（会忽略中文内容）
     font = await doc.embedFont(StandardFonts.Helvetica)
     boldFont = await doc.embedFont(StandardFonts.HelveticaBold)
   }
 
-  const PAGE_W = 595, PAGE_H = 842  // A4
+  const PAGE_W = 595, PAGE_H = 842 // A4
   const MARGIN = 55
-  const hasCJK = !!fontBytes
 
   const ctx = new PdfLayout(doc, { font, boldFont, hasCJK, pageWidth: PAGE_W, pageHeight: PAGE_H, margin: MARGIN })
 
   // ========== 封面 ==========
   {
     ctx.y = PAGE_H * 0.38
-    ctx.drawCenter('考研数学智能组卷', 28, true)
+    ctx.drawCenter('考研数学智能组卷', 26, true)
     ctx.space(4)
     ctx.drawCenter('—— 模拟试卷 ——', 14)
     ctx.space(20)
-
-    // 封面分隔线
-    ctx.y -= 2
     ctx.drawHr()
-    ctx.space(12)
-
+    ctx.space(14)
     ctx.drawCenter(`数学类别：${subjectName}`, 13)
     ctx.drawCenter(`题库名称：${bookName}`, 13)
     ctx.drawCenter(`方案名称：${plan.name}`, 13)
     ctx.drawCenter(`试卷编号：${paper.name}`, 13)
     ctx.drawCenter(`生成时间：${new Date(paper.createdAt).toLocaleString('zh-CN')}`, 11)
-    ctx.space(10)
-
+    ctx.space(12)
     const types = paper.config
-    const summary = `选择题 ${types.choice} 道 | 填空题 ${types.blank} 道 | 解答题 ${types.answer} 道`
-    ctx.drawCenter(summary, 11)
-    ctx.space(6)
+    ctx.drawCenter(`选择题 ${types.choice} 道 | 填空题 ${types.blank} 道 | 解答题 ${types.answer} 道`, 11)
     ctx.drawCenter(`共 ${questions.length} 题`, 11)
   }
 
@@ -315,54 +309,51 @@ async function buildPdfDoc(
   for (const type of typeOrder) {
     const qs = questions.filter(q => q.type === type)
     if (!qs.length) continue
+    ctx.ensure(60)
 
-    ctx.ensure(50)
-
-    // 题型标题（带装饰）
-    ctx.space(8)
-    ctx.draw('━'.repeat(40), 8, false, 0)
+    // 题型标题
+    ctx.draw('━'.repeat(48), 8)
     ctx.space(2)
-    ctx.draw(`▎${TYPE_LABELS[type]}（共${qs.length}题）`, 15, true)
-    ctx.draw('━'.repeat(40), 8, false, 0)
-    ctx.space(8)
+    ctx.draw(`▎${TYPE_LABELS[type]}（共${qs.length}题）`, 14, true)
+    ctx.draw('━'.repeat(48), 8)
+    ctx.space(10)
 
     for (const q of qs) {
       globalIdx++
       ctx.ensure(60)
 
-      // 题号行
+      // 题号 + 来源
       const src = sourceMode === 'chapter'
-        ? `[${q.sectionName} · 第${q.chapter}章 · 第${q.questionNumber}题]`
-        : `[P${q.page} · 第${q.questionNumber}题]`
+        ? `[${q.sectionName} · 第${q.chapter}章]`
+        : `[P${q.page}]`
+      const content = hasCJK ? latexToText(q.content) : q.content.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+
       ctx.draw(`第${globalIdx}题  ${src}`, 9, true, 4)
       ctx.space(2)
 
-      // 题目内容（公式转为可读文本）
-      const content = hasCJK ? latexToText(q.content) : q.content.replace(/[^\x20-\x7E\t\n]/g, '')
+      // 渲染内容
       const lines = content.split('\n').map(l => l.trim()).filter(Boolean)
-
       for (const line of lines) {
-        ctx.ensure(16)
-        ctx.drawWrap(line, 10, false, 4)
+        ctx.drawWrap(line, 10, false, 6)
       }
-      ctx.space(8)
+      ctx.space(10)
     }
   }
 
   // ========== 来源清单 ==========
   ctx.ensure(60)
   ctx.space(4)
-  ctx.draw('━'.repeat(40), 8, false, 0)
-  ctx.draw('▎题目来源', 14, true)
-  ctx.draw('━'.repeat(40), 8, false, 0)
-  ctx.space(4)
+  ctx.draw('━'.repeat(48), 8)
+  ctx.draw('▎题目来源（共' + questions.length + '题）', 12, true)
+  ctx.draw('━'.repeat(48), 8)
+  ctx.space(6)
 
   for (const q of questions) {
     ctx.ensure(14)
     const src = sourceMode === 'chapter'
-      ? `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题 (P${q.page})]`
+      ? `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题(P${q.page})]`
       : `[P${q.page} · 第${q.questionNumber}题]`
-    ctx.drawWrap(`${q.id}: ${src}`, 8, false, 4)
+    ctx.drawWrap(`${q.id.slice(-12)}: ${src}`, 8, false, 4)
   }
 
   return doc
@@ -373,7 +364,7 @@ async function buildPdfDoc(
 export async function previewPdf(opts: PdfOptions): Promise<string> {
   const doc = await buildPdfDoc(opts.paper, opts.plan, opts.questions, opts.bookName, opts.subjectName, opts.sourceMode)
   const bytes = await doc.save()
-  return URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+  return URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
 }
 
 export async function downloadPdf(opts: PdfOptions) {
