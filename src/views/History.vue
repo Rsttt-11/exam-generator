@@ -23,7 +23,6 @@ const viewingPaper = ref<Paper | null>(null)
 const viewQuestions = ref<Question[]>([])
 const dialogVisible = ref(false)
 
-// PDF preview
 const previewDialogVisible = ref(false)
 const previewLoading = ref(false)
 const previewUrl = ref('')
@@ -37,7 +36,6 @@ onMounted(async () => {
     router.replace('/plan')
     return
   }
-
   await paperStore.loadPapers(planId)
   await loadBookMeta(plan.value.subject, plan.value.book)
   if (meta.value) {
@@ -62,9 +60,7 @@ async function handleExportPdf(paper: Paper) {
   const qs = paper.questionIds.map((id) => qMap.get(id)).filter(Boolean) as Question[]
   try {
     await downloadPdf({
-      paper,
-      plan: plan.value!,
-      questions: qs,
+      paper, plan: plan.value!, questions: qs,
       bookName: getBookName(plan.value!.book),
       subjectName: getSubjectName(plan.value!.subject),
       sourceMode: 'chapter',
@@ -83,14 +79,11 @@ async function handlePreview(paper: Paper) {
   const qs = paper.questionIds.map((id) => qMap.get(id)).filter(Boolean) as Question[]
   try {
     const url = await previewPdf({
-      paper,
-      plan: plan.value!,
-      questions: qs,
+      paper, plan: plan.value!, questions: qs,
       bookName: getBookName(plan.value!.book),
       subjectName: getSubjectName(plan.value!.subject),
       sourceMode: 'chapter',
     })
-    // Revoke old URL if exists
     if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
     previewUrl.value = url
     previewDialogVisible.value = true
@@ -102,231 +95,177 @@ async function handlePreview(paper: Paper) {
   }
 }
 
-function getSubjectName(id: string) {
-  return appStore.subjects.find((s) => s.id === id)?.name || id
-}
-
-function getBookName(id: string) {
-  return appStore.books.find((b) => b.id === id)?.name || id
-}
-
+function getSubjectName(id: string) { return appStore.subjects.find((s) => s.id === id)?.name || id }
+function getBookName(id: string) { return appStore.books.find((b) => b.id === id)?.name || id }
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('zh-CN')
+  return new Date(iso).toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
 }
 </script>
 
 <template>
   <div class="history-page">
-    <h1>历史试卷</h1>
-
-    <div v-if="plan" class="context-bar">
-      <el-tag>{{ plan.name }}</el-tag>
-      <span class="arrow">&gt;</span>
-      <el-tag>{{ getSubjectName(plan.subject) }}</el-tag>
-      <span class="arrow">&gt;</span>
-      <el-tag>{{ getBookName(plan.book) }}</el-tag>
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">📜 历史试卷</h1>
+        <p v-if="plan" class="page-desc">{{ plan.name }} · {{ getSubjectName(plan.subject) }} · {{ getBookName(plan.book) }}</p>
+      </div>
+      <div class="page-header-right">
+        <el-button type="primary" @click="router.push('/generate/'+planId)" round>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          去组卷
+        </el-button>
+      </div>
     </div>
 
-    <div v-if="paperStore.papers.length === 0" class="empty">
-      <el-empty description="暂无历史试卷" />
+    <!-- Empty -->
+    <div v-if="paperStore.papers.length === 0" class="empty-state">
+      <div class="empty-icon">📄</div>
+      <p class="empty-text">暂无历史试卷</p>
+      <el-button type="primary" @click="router.push('/generate/'+planId)" round>去生成第一套试卷</el-button>
     </div>
 
+    <!-- Paper List -->
     <div v-else class="paper-list">
-      <div
-        v-for="paper in paperStore.papers"
-        :key="paper.id"
-        class="paper-card"
-      >
-        <div class="paper-info">
-          <h3>{{ paper.name }}</h3>
-          <p class="paper-meta">
-            生成于 {{ formatDate(paper.createdAt) }}
-            <span class="divider">|</span>
-            选择题 {{ paper.config.choice }} 道
-            <span class="divider">|</span>
-            填空题 {{ paper.config.blank }} 道
-            <span class="divider">|</span>
-            解答题 {{ paper.config.answer }} 道
-            <span class="divider">|</span>
-            共 {{ paper.questionIds.length }} 题
-          </p>
+      <div v-for="paper in paperStore.papers" :key="paper.id" class="paper-card glass-card">
+        <div class="paper-top">
+          <div class="paper-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div class="paper-info">
+            <h3>{{ paper.name }}</h3>
+            <p class="paper-meta">{{ formatDate(paper.createdAt) }}</p>
+          </div>
         </div>
+
+        <div class="paper-stats">
+          <div class="paper-stat" v-for="t in ([{key:'choice',label:'选择'},{key:'blank',label:'填空'},{key:'answer',label:'解答'}] as const)" :key="t.key">
+            <span class="paper-stat-value">{{ paper.config[t.key] }}</span>
+            <span class="paper-stat-label">{{ t.label }}</span>
+          </div>
+          <div class="paper-stat-divider" />
+          <div class="paper-stat">
+            <span class="paper-stat-value paper-stat-total">{{ paper.questionIds.length }}</span>
+            <span class="paper-stat-label">共</span>
+          </div>
+        </div>
+
         <div class="paper-actions">
-          <el-button size="small" @click="handleView(paper)">查看</el-button>
-          <el-button size="small" :loading="previewLoading" @click="handlePreview(paper)">预览PDF</el-button>
-          <el-button size="small" @click="handleExportPdf(paper)">导出PDF</el-button>
-          <el-popconfirm
-            title="删除后题目将恢复可抽取状态，确定删除？"
-            @confirm="handleDelete(paper.id!)"
-          >
+          <el-button size="small" text @click="handleView(paper)">👁️ 查看</el-button>
+          <el-button size="small" text :loading="previewLoading" @click="handlePreview(paper)">📄 预览PDF</el-button>
+          <el-button size="small" text @click="handleExportPdf(paper)">⬇️ 导出PDF</el-button>
+          <el-popconfirm title="删除后题目将恢复可抽取状态，确定删除？" @confirm="handleDelete(paper.id!)">
             <template #reference>
-              <el-button size="small" type="danger" text>删除</el-button>
+              <el-button size="small" text type="danger">🗑️ 删除</el-button>
             </template>
           </el-popconfirm>
         </div>
       </div>
     </div>
 
-    <div class="back">
-      <el-button @click="router.push('/plan')">返回方案管理</el-button>
-      <el-button type="primary" @click="router.push('/generate/'+planId)">去组卷</el-button>
+    <!-- Footer -->
+    <div class="action-row">
+      <el-button @click="router.push('/plan')" round>← 返回方案管理</el-button>
     </div>
 
-    <el-dialog v-model="dialogVisible" title="试卷内容" width="800px" top="5vh">
+    <!-- View Dialog -->
+    <el-dialog v-model="dialogVisible" title="试卷内容" width="800px" top="5vh" destroy-on-close>
       <template v-if="viewingPaper">
         <template v-for="type in ['choice', 'blank', 'answer']" :key="type">
-          <div
-            v-if="viewQuestions.filter((q) => q.type === type).length"
-            class="dialog-type-section"
-          >
+          <div v-if="viewQuestions.filter((q) => q.type === type).length" class="dialog-type-section">
             <h3>{{ TYPE_LABELS[type] }}</h3>
-            <div
-              v-for="(q, idx) in viewQuestions.filter((q) => q.type === type)"
-              :key="q.id"
-              class="dialog-question"
-            >
+            <div v-for="(q, idx) in viewQuestions.filter((q) => q.type === type)" :key="q.id" class="dialog-question">
               <p class="dq-label">
                 第{{ idx + 1 }}题
-                <span class="dq-source">
-                  {{ q.sectionName }} → 第{{ q.chapter }}章 → 第{{ q.questionNumber }}题
-                </span>
+                <span class="dq-source">{{ q.sectionName }} → 第{{ q.chapter }}章 → 第{{ q.questionNumber }}题</span>
               </p>
-              <div class="dq-content" v-html="q.content.replace(/\\n/g, '<br>')"></div>
+              <div class="dq-content">{{ q.content }}</div>
             </div>
           </div>
         </template>
       </template>
     </el-dialog>
 
-    <!-- PDF Preview Dialog -->
-    <el-dialog
-      v-model="previewDialogVisible"
-      :title="`PDF预览 - ${previewPaperName}`"
-      width="90%"
-      top="3vh"
-      fullscreen
-    >
-      <iframe
-        v-if="previewUrl"
-        :src="previewUrl"
-        style="width: 100%; height: calc(100vh - 120px); border: none;"
-      />
+    <!-- PDF Preview -->
+    <el-dialog v-model="previewDialogVisible" :title="`PDF预览 - ${previewPaperName}`" width="90%" top="3vh" fullscreen destroy-on-close>
+      <iframe v-if="previewUrl" :src="previewUrl" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:8px" />
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.history-page {
-  max-width: 780px;
-  margin: 0 auto;
-  padding: 40px 20px;
-}
+.history-page { padding-top: 8px; }
 
-h1 {
-  text-align: center;
-  margin-bottom: 24px;
-  font-size: 24px;
-  font-weight: 500;
-}
-
-.context-bar {
-  text-align: center;
-  margin-bottom: 24px;
+.page-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.arrow {
-  color: var(--el-text-color-secondary);
-}
-
-.empty {
-  padding: 40px 0;
-}
-
-.paper-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.paper-card {
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  padding: 20px;
-  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  margin-bottom: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
+.page-title { font-size: 26px; font-weight: 700; }
+.page-desc { font-size: 14px; color: var(--el-text-color-secondary); margin-top: 4px; }
 
-.paper-info h3 {
-  margin: 0 0 6px;
-  font-size: 18px;
-  font-weight: 500;
-}
+/* Empty */
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-icon { font-size: 56px; margin-bottom: 16px; }
+.empty-text { color: var(--el-text-color-secondary); margin-bottom: 20px; font-size: 15px; }
 
-.paper-meta {
-  margin: 0;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
+/* Paper List */
+.paper-list { display: flex; flex-direction: column; gap: 16px; }
 
-.divider {
-  margin: 0 8px;
-}
+.paper-card { padding: 20px; display: flex; flex-direction: column; gap: 16px; transition: all var(--transition-normal); }
+.paper-card:hover { box-shadow: var(--shadow-lg); }
 
-.paper-actions {
-  display: flex;
-  gap: 8px;
+.paper-top { display: flex; align-items: center; gap: 14px; }
+.paper-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-primary-500);
+  background: var(--el-color-primary-light-9);
   flex-shrink: 0;
 }
+.paper-info { flex: 1; min-width: 0; }
+.paper-info h3 { font-size: 17px; font-weight: 600; }
+.paper-meta { font-size: 13px; color: var(--el-text-color-secondary); margin-top: 2px; }
 
-.back {
-  text-align: center;
-  margin-top: 32px;
+.paper-stats {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 0;
+  border-top: 1px solid var(--el-border-color-light);
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+.paper-stat { text-align: center; }
+.paper-stat-value { display: block; font-size: 18px; font-weight: 700; color: var(--color-primary-500); }
+.paper-stat-total { color: var(--color-accent); }
+.paper-stat-label { font-size: 12px; color: var(--el-text-color-secondary); margin-top: 1px; }
+.paper-stat-divider {
+  width: 1px; height: 28px; background: var(--el-border-color-light);
 }
 
-.dialog-type-section {
-  margin-bottom: 20px;
-}
+.paper-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
+/* Dialog */
+.dialog-type-section { margin-bottom: 20px; }
 .dialog-type-section h3 {
-  font-size: 15px;
-  font-weight: 500;
-  margin-bottom: 10px;
+  font-size: 15px; font-weight: 600; margin-bottom: 10px;
   padding-bottom: 6px;
   border-bottom: 2px solid var(--el-color-primary);
 }
-
 .dialog-question {
-  background: var(--el-bg-color);
+  background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-light);
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 10px;
+  border-radius: 8px;
+  padding: 12px; margin-bottom: 10px;
 }
-
-.dq-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--el-color-primary);
-  margin-bottom: 6px;
-}
-
-.dq-source {
-  font-weight: 400;
-  color: var(--el-text-color-secondary);
-  margin-left: 12px;
-}
-
-.dq-content {
-  font-size: 14px;
-  line-height: 1.7;
-}
+.dq-label { font-size: 13px; font-weight: 500; color: var(--el-color-primary); margin-bottom: 6px; }
+.dq-source { font-weight: 400; color: var(--el-text-color-secondary); margin-left: 12px; }
+.dq-content { font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
 </style>

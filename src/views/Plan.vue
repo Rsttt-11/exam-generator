@@ -27,7 +27,10 @@ function getBookName(id: string) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('zh-CN')
+  return new Date(iso).toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
 }
 
 function handleRename(plan: Plan) {
@@ -47,148 +50,224 @@ function enterPlan(plan: Plan) {
 
 <template>
   <div class="plan-page">
-    <h1>方案管理</h1>
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-title">方案管理</h1>
+        <p class="page-desc">管理你的刷题方案，跟踪学习进度</p>
+      </div>
+      <div class="page-header-right">
+        <el-button type="primary" @click="planStore.createPlan()" :loading="planStore.loading" round>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          创建新方案
+        </el-button>
+      </div>
+    </div>
 
+    <!-- Context -->
     <div class="context-bar">
-      <el-tag>{{ getSubjectName(appStore.currentSubject) }}</el-tag>
-      <span class="arrow">&gt;</span>
-      <el-tag>{{ getBookName(appStore.currentBook) }}</el-tag>
+      <el-tag round>{{ getSubjectName(appStore.currentSubject) }}</el-tag>
+      <span class="arrow">→</span>
+      <el-tag round>{{ getBookName(appStore.currentBook) }}</el-tag>
     </div>
 
-    <div class="actions">
-      <el-button type="primary" @click="planStore.createPlan()" :loading="planStore.loading">
-        + 创建新方案
-      </el-button>
+    <!-- Empty State -->
+    <div v-if="planStore.plans.length === 0 && !planStore.loading" class="empty-state">
+      <div class="empty-icon">📋</div>
+      <p class="empty-text">还没有方案，创建一个开始刷题吧</p>
+      <el-button type="primary" @click="planStore.createPlan()" round>立即创建</el-button>
     </div>
 
-    <div v-if="planStore.plans.length === 0 && !planStore.loading" class="empty">
-      <el-empty description="暂无方案，点击上方按钮创建">
-        <el-button type="primary" @click="planStore.createPlan()">立即创建</el-button>
-      </el-empty>
-    </div>
-
-    <div v-else class="plan-list">
+    <!-- Plan List -->
+    <div v-else class="plan-grid">
       <div
         v-for="plan in planStore.plans"
         :key="plan.id"
-        class="plan-card"
+        class="plan-card glass-card"
         @click="enterPlan(plan)"
       >
-        <div class="plan-info">
-          <h3>{{ plan.name }}</h3>
-          <p class="plan-meta">
-            创建于 {{ formatDate(plan.createdAt) }}
-            <span class="divider">|</span>
-            已抽题 {{ plan.usedQuestions.length }} 道
-            <span class="divider">|</span>
-            试卷 {{ plan.paperIds.length }} 套
-          </p>
+        <!-- Card Top -->
+        <div class="plan-top">
+          <div class="plan-icon">
+            {{ String(plan.id).padStart(2, '0') }}
+          </div>
+          <div class="plan-info">
+            <h3>{{ plan.name }}</h3>
+            <p class="plan-date">{{ formatDate(plan.createdAt) }}</p>
+          </div>
         </div>
+
+        <!-- Stats Row -->
+        <div class="plan-stats">
+          <div class="plan-stat">
+            <span class="plan-stat-value">{{ plan.usedQuestions.length }}</span>
+            <span class="plan-stat-label">已抽题</span>
+          </div>
+          <div class="plan-stat-divider" />
+          <div class="plan-stat">
+            <span class="plan-stat-value">{{ plan.paperIds.length }}</span>
+            <span class="plan-stat-label">试卷</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
         <div class="plan-actions" @click.stop>
-          <el-button size="small" @click="handleRename(plan)">重命名</el-button>
-          <el-button size="small" @click="router.push('/history/'+plan.id)">历史</el-button>
-          <el-button size="small" @click="router.push('/stats/'+plan.id)">统计</el-button>
-          <el-popconfirm
-            title="删除后无法恢复，确定删除？"
-            @confirm="planStore.deletePlan(plan.id!)"
-          >
+          <el-button size="small" text @click="handleRename(plan)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-right:3px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            重命名
+          </el-button>
+          <router-link :to="`/history/${plan.id}`" class="action-link" @click.stop>
+            <el-button size="small" text>📜 历史</el-button>
+          </router-link>
+          <router-link :to="`/stats/${plan.id}`" class="action-link" @click.stop>
+            <el-button size="small" text>📊 统计</el-button>
+          </router-link>
+          <el-popconfirm title="删除后无法恢复，确定删除？" @confirm="planStore.deletePlan(plan.id!)">
             <template #reference>
-              <el-button size="small" type="danger" text>删除</el-button>
+              <el-button size="small" text type="danger">🗑️ 删除</el-button>
             </template>
           </el-popconfirm>
         </div>
       </div>
     </div>
 
-    <div class="back">
-      <el-button @click="router.push('/')">返回首页</el-button>
-      <el-button @click="router.push('/settings')">设置</el-button>
+    <!-- Bottom Actions -->
+    <div class="action-row">
+      <el-button @click="router.push('/')" round>← 返回首页</el-button>
+      <el-button @click="router.push('/settings')" round>⚙️ 设置</el-button>
     </div>
   </div>
 </template>
 
 <style scoped>
 .plan-page {
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 40px 20px;
+  padding-top: 8px;
 }
 
-h1 {
-  text-align: center;
-  margin-bottom: 24px;
-  font-size: 24px;
-  font-weight: 500;
-}
-
-.context-bar {
-  text-align: center;
-  margin-bottom: 24px;
+/* Page Header */
+.page-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
-
-.arrow {
+.page-title {
+  font-size: 26px;
+  font-weight: 700;
+}
+.page-desc {
+  font-size: 14px;
   color: var(--el-text-color-secondary);
+  margin-top: 4px;
 }
 
-.actions {
+/* Empty */
+.empty-state {
   text-align: center;
-  margin-bottom: 24px;
+  padding: 60px 20px;
+}
+.empty-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+}
+.empty-text {
+  color: var(--el-text-color-secondary);
+  margin-bottom: 20px;
+  font-size: 15px;
 }
 
-.empty {
-  padding: 40px 0;
+/* Grid */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 16px;
 }
 
-.plan-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
+/* Card */
 .plan-card {
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
+  cursor: pointer;
   padding: 20px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: border-color 0.2s;
+  flex-direction: column;
+  gap: 16px;
+  transition: all var(--transition-normal);
 }
-
 .plan-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
   border-color: var(--el-color-primary);
 }
 
-.plan-info h3 {
-  margin: 0 0 6px;
-  font-size: 18px;
-  font-weight: 500;
+.plan-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
-
-.plan-meta {
-  margin: 0;
+.plan-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--el-color-primary-light-9);
+  color: var(--color-primary-500);
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.plan-info {
+  flex: 1;
+  min-width: 0;
+}
+.plan-info h3 {
+  font-size: 17px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-date {
   font-size: 13px;
   color: var(--el-text-color-secondary);
+  margin-top: 2px;
 }
 
-.divider {
-  margin: 0 8px;
+.plan-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 0;
+  border-top: 1px solid var(--el-border-color-light);
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+.plan-stat {
+  text-align: center;
+}
+.plan-stat-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary-500);
+}
+.plan-stat-label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.plan-stat-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--el-border-color-light);
 }
 
 .plan-actions {
   display: flex;
-  gap: 8px;
-  flex-shrink: 0;
+  gap: 4px;
+  flex-wrap: wrap;
 }
-
-.back {
-  text-align: center;
-  margin-top: 32px;
+.action-link {
+  text-decoration: none;
 }
 </style>

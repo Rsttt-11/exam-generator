@@ -30,30 +30,13 @@ onMounted(async () => {
   }
 })
 
-function getSubjectName(id: string) {
-  return appStore.subjects.find((s) => s.id === id)?.name || id
-}
-
-function getBookName(id: string) {
-  return appStore.books.find((b) => b.id === id)?.name || id
-}
+function getSubjectName(id: string) { return appStore.subjects.find((s) => s.id === id)?.name || id }
+function getBookName(id: string) { return appStore.books.find((b) => b.id === id)?.name || id }
 
 const totalQuestions = computed(() => questions.value.length)
 const usedCount = computed(() => plan.value?.usedQuestions.length || 0)
 const totalRate = computed(() => totalQuestions.value > 0 ? Math.round((usedCount.value / totalQuestions.value) * 100) : 0)
 
-function sectionUsedCount(sectionId: string): number {
-  const usedSet = new Set(plan.value?.usedQuestions || [])
-  return questions.value.filter((q) => q.sectionId === sectionId && usedSet.has(q.id)).length
-}
-function sectionTotal(sectionId: string): number {
-  return questions.value.filter((q) => q.sectionId === sectionId).length
-}
-function sectionRemaining(sectionId: string): number {
-  return sectionTotal(sectionId) - sectionUsedCount(sectionId)
-}
-
-/** Category stats */
 function categoryUsedCount(catId: string): number {
   const cat = meta.value?.categories?.find(c => c.id === catId)
   if (!cat) return 0
@@ -65,9 +48,7 @@ function categoryTotal(catId: string): number {
   if (!cat) return 0
   return questions.value.filter((q) => cat.chapters.includes(q.chapter)).length
 }
-function categoryRemaining(catId: string): number {
-  return categoryTotal(catId) - categoryUsedCount(catId)
-}
+function categoryRemaining(catId: string): number { return categoryTotal(catId) - categoryUsedCount(catId) }
 
 function chapterUsedCount(chapterId: number): number {
   const usedSet = new Set(plan.value?.usedQuestions || [])
@@ -76,106 +57,168 @@ function chapterUsedCount(chapterId: number): number {
 function chapterTotal(chapterId: number): number {
   return questions.value.filter((q) => q.chapter === chapterId).length
 }
-function chapterRemaining(chapterId: number): number {
-  return chapterTotal(chapterId) - chapterUsedCount(chapterId)
-}
+function chapterRemaining(chapterId: number): number { return chapterTotal(chapterId) - chapterUsedCount(chapterId) }
+
 function typeUsedCount(type: string): number {
   const usedSet = new Set(plan.value?.usedQuestions || [])
   return questions.value.filter((q) => q.type === type && usedSet.has(q.id)).length
 }
-function typeTotal(type: string): number {
-  return questions.value.filter((q) => q.type === type).length
-}
-function typeRemaining(type: string): number {
-  return typeTotal(type) - typeUsedCount(type)
-}
+function typeTotal(type: string): number { return questions.value.filter((q) => q.type === type).length }
+function typeRemaining(type: string): number { return typeTotal(type) - typeUsedCount(type) }
+
+const typeConfig = [
+  { key: 'choice' as const, label: '选择题', emoji: '📝' },
+  { key: 'blank' as const, label: '填空题', emoji: '✏️' },
+  { key: 'answer' as const, label: '解答题', emoji: '📖' },
+]
 </script>
 
 <template>
   <div class="stats-page">
-    <h1>数据统计</h1>
-    <div v-if="plan" class="context-bar">
-      <el-tag>{{ plan.name }}</el-tag>
-      <span class="arrow">&gt;</span>
-      <el-tag>{{ getSubjectName(plan.subject) }}</el-tag>
-      <span class="arrow">&gt;</span>
-      <el-tag>{{ getBookName(plan.book) }}</el-tag>
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">📊 数据统计</h1>
+        <p v-if="plan" class="page-desc">{{ plan.name }} · {{ getSubjectName(plan.subject) }} · {{ getBookName(plan.book) }}</p>
+      </div>
     </div>
-    <div v-if="qbLoading" class="loading">正在加载题库...</div>
+
+    <div v-if="qbLoading" class="loading-state">
+      <el-skeleton :rows="3" animated />
+      <p style="text-align:center;margin-top:12px;color:var(--el-text-color-secondary)">正在加载题库...</p>
+    </div>
+
     <template v-else-if="meta">
-      <div class="stat-card overall">
-        <h2>总体完成度</h2>
-        <div class="stat-row">
-          <span class="stat-num">{{ totalRate }}%</span>
-          <el-progress :percentage="totalRate" :stroke-width="20" />
+      <!-- Overall -->
+      <div class="stat-hero">
+        <div class="stat-hero-circle">
+          <svg viewBox="0 0 120 120" width="120" height="120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="var(--el-border-color)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="var(--color-primary-500)" stroke-width="8"
+              :stroke-dasharray="326.7" :stroke-dashoffset="326.7 - (totalRate / 100) * 326.7"
+              stroke-linecap="round" transform="rotate(-90 60 60)"
+              style="transition: stroke-dashoffset 0.8s ease"
+            />
+            <text x="60" y="54" text-anchor="middle" font-size="28" font-weight="700" fill="var(--color-primary-500)">{{ totalRate }}%</text>
+            <text x="60" y="78" text-anchor="middle" font-size="12" fill="var(--el-text-color-secondary)">完成度</text>
+          </svg>
         </div>
-        <p class="stat-detail">已抽 {{ usedCount }} 题 / 共 {{ totalQuestions }} 题</p>
-      </div>
-      <div class="stat-card">
-        <h2>分类完成度</h2>
-        <div v-if="meta.categories && meta.categories.length">
-          <div v-for="cat in meta.categories" :key="cat.id" class="stat-item">
-            <div class="stat-label-row">
-              <span><strong>{{ cat.name }}</strong></span>
-              <span class="stat-count">{{ categoryUsedCount(cat.id) }} / {{ categoryTotal(cat.id) }} <span class="remaining">剩 {{ categoryRemaining(cat.id) }}</span></span>
-            </div>
-            <el-progress :percentage="categoryTotal(cat.id)>0 ? Math.round(categoryUsedCount(cat.id)/categoryTotal(cat.id)*100) : 0" :stroke-width="14" />
+        <div class="stat-hero-info">
+          <div class="stat-hero-item">
+            <span class="stat-hero-value">{{ usedCount }}</span>
+            <span class="stat-hero-label">已抽题目</span>
+          </div>
+          <div class="stat-hero-divider" />
+          <div class="stat-hero-item">
+            <span class="stat-hero-value">{{ totalQuestions }}</span>
+            <span class="stat-hero-label">总题目</span>
+          </div>
+          <div class="stat-hero-divider" />
+          <div class="stat-hero-item">
+            <span class="stat-hero-value">{{ totalQuestions - usedCount }}</span>
+            <span class="stat-hero-label">剩余</span>
           </div>
         </div>
-        <div v-else>
-          <div v-for="s in meta.sections" :key="s.id" class="stat-item">
-            <div class="stat-label-row">
-              <span>{{ s.name }}</span>
-              <span class="stat-count">{{ sectionUsedCount(s.id) }} / {{ sectionTotal(s.id) }} <span class="remaining">剩 {{ sectionRemaining(s.id) }}</span></span>
-            </div>
-            <el-progress :percentage="sectionTotal(s.id)>0 ? Math.round(sectionUsedCount(s.id)/sectionTotal(s.id)*100) : 0" :stroke-width="14" />
+      </div>
+
+      <!-- Category Stats -->
+      <div class="stat-card glass-card" v-if="meta.categories && meta.categories.length">
+        <div class="section-title">分类完成度</div>
+        <div v-for="cat in meta.categories" :key="cat.id" class="stat-item">
+          <div class="stat-label-row">
+            <span class="stat-name">{{ cat.name }}</span>
+            <span class="stat-count">{{ categoryUsedCount(cat.id) }} / {{ categoryTotal(cat.id) }}</span>
           </div>
+          <el-progress
+            :percentage="categoryTotal(cat.id)>0 ? Math.round(categoryUsedCount(cat.id)/categoryTotal(cat.id)*100) : 0"
+            :stroke-width="12"
+            color="var(--bg-gradient-start)"
+          />
+          <div class="stat-remain">剩余 {{ categoryRemaining(cat.id) }} 题</div>
         </div>
       </div>
-      <div class="stat-card">
-        <h2>章节完成度</h2>
+
+      <!-- Chapter Stats -->
+      <div class="stat-card glass-card">
+        <div class="section-title">章节完成度</div>
         <div v-for="ch in meta.chapters" :key="ch.id" class="stat-item">
           <div class="stat-label-row">
-            <span>第{{ ch.id }}章 {{ ch.name }}</span>
-            <span class="stat-count">{{ chapterUsedCount(ch.id) }} / {{ chapterTotal(ch.id) }} <span class="remaining">剩 {{ chapterRemaining(ch.id) }}</span></span>
+            <span class="stat-name">第{{ ch.id }}章 {{ ch.name }}</span>
+            <span class="stat-count">{{ chapterUsedCount(ch.id) }} / {{ chapterTotal(ch.id) }}</span>
           </div>
-          <el-progress :percentage="chapterTotal(ch.id)>0 ? Math.round(chapterUsedCount(ch.id)/chapterTotal(ch.id)*100) : 0" :stroke-width="14" />
+          <el-progress
+            :percentage="chapterTotal(ch.id)>0 ? Math.round(chapterUsedCount(ch.id)/chapterTotal(ch.id)*100) : 0"
+            :stroke-width="10"
+            :color="chapterUsedCount(ch.id) === chapterTotal(ch.id) ? 'var(--color-success)' : 'var(--el-color-primary)'"
+          />
+          <div class="stat-remain">剩余 {{ chapterRemaining(ch.id) }} 题</div>
         </div>
       </div>
-      <div class="stat-card">
-        <h2>题型完成度</h2>
-        <div v-for="type in (['choice','blank','answer'] as const)" :key="type" class="stat-item">
+
+      <!-- Type Stats -->
+      <div class="stat-card glass-card">
+        <div class="section-title">题型完成度</div>
+        <div v-for="t in typeConfig" :key="t.key" class="stat-item">
           <div class="stat-label-row">
-            <span>{{ {choice:'选择题',blank:'填空题',answer:'解答题'}[type] }}</span>
-            <span class="stat-count">{{ typeUsedCount(type) }} / {{ typeTotal(type) }} <span class="remaining">剩 {{ typeRemaining(type) }}</span></span>
+            <span class="stat-name">{{ t.emoji }} {{ t.label }}</span>
+            <span class="stat-count">{{ typeUsedCount(t.key) }} / {{ typeTotal(t.key) }}</span>
           </div>
-          <el-progress :percentage="typeTotal(type)>0 ? Math.round(typeUsedCount(type)/typeTotal(type)*100) : 0" :stroke-width="14" />
+          <el-progress
+            :percentage="typeTotal(t.key)>0 ? Math.round(typeUsedCount(t.key)/typeTotal(t.key)*100) : 0"
+            :stroke-width="12"
+            :color="{choice:'var(--bg-gradient-start)',blank:'var(--color-accent)',answer:'var(--color-success)'}[t.key]"
+          />
+          <div class="stat-remain">剩余 {{ typeRemaining(t.key) }} 题</div>
         </div>
       </div>
     </template>
-    <div class="back">
-      <el-button @click="router.push('/plan')">返回方案管理</el-button>
-      <el-button type="primary" @click="router.push('/generate/'+planId)">去组卷</el-button>
+
+    <!-- Footer -->
+    <div class="action-row">
+      <el-button @click="router.push('/plan')" round>← 返回方案管理</el-button>
+      <el-button type="primary" @click="router.push('/generate/'+planId)" round>🎲 去组卷</el-button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.stats-page { max-width: 680px; margin: 0 auto; padding: 40px 20px; }
-h1 { text-align: center; margin-bottom: 24px; font-size: 24px; font-weight: 500; }
-.context-bar { text-align: center; margin-bottom: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.arrow { color: var(--el-text-color-secondary); }
-.loading { text-align: center; padding: 60px; color: var(--el-text-color-secondary); }
-.stat-card { background: var(--el-bg-color); border: 1px solid var(--el-border-color-light); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
-.stat-card h2 { font-size: 16px; font-weight: 500; margin-bottom: 16px; color: var(--el-text-color-primary); }
-.stat-card.overall .stat-num { font-size: 36px; font-weight: 600; color: var(--el-color-primary); margin-right: 16px; }
-.stat-card.overall .stat-row { display: flex; align-items: center; gap: 16px; }
-.stat-card.overall .el-progress { flex: 1; }
-.stat-detail { margin-top: 12px; font-size: 13px; color: var(--el-text-color-secondary); text-align: center; }
-.stat-item { margin-bottom: 14px; }
+.stats-page { padding-top: 8px; }
+
+.page-header { margin-bottom: 24px; }
+.page-title { font-size: 26px; font-weight: 700; }
+.page-desc { font-size: 14px; color: var(--el-text-color-secondary); margin-top: 4px; }
+
+.loading-state { max-width: 400px; margin: 40px auto; }
+
+/* Hero */
+.stat-hero {
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--radius-lg);
+  padding: 32px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.stat-hero-circle { flex-shrink: 0; }
+.stat-hero-info { display: flex; align-items: center; gap: 24px; }
+.stat-hero-item { text-align: center; }
+.stat-hero-value { display: block; font-size: 28px; font-weight: 700; color: var(--color-primary-500); }
+.stat-hero-value:last-child { color: var(--el-text-color-primary); }
+.stat-hero-label { font-size: 13px; color: var(--el-text-color-secondary); margin-top: 2px; }
+.stat-hero-divider {
+  width: 1px; height: 36px; background: var(--el-border-color-light);
+}
+
+/* Cards */
+.stat-card { padding: 20px; margin-bottom: 16px; }
+.stat-item { margin-bottom: 18px; }
 .stat-item:last-child { margin-bottom: 0; }
-.stat-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 14px; }
-.stat-count { font-size: 13px; color: var(--el-text-color-regular); }
-.remaining { margin-left: 8px; font-size: 12px; color: var(--el-text-color-secondary); }
-.back { text-align: center; margin-top: 32px; display: flex; gap: 12px; justify-content: center; }
-</style>", "file_path": "D:Codex-ProjectsClaude 1智能组卷系统exam-generatorsrcviewsStats.vue"}
+.stat-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.stat-name { font-size: 14px; font-weight: 500; color: var(--el-text-color-primary); }
+.stat-count { font-size: 13px; color: var(--el-text-color-regular); font-weight: 500; }
+.stat-remain { font-size: 12px; color: var(--el-text-color-secondary); margin-top: 3px; text-align: right; }
+</style>
