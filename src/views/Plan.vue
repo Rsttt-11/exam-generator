@@ -87,6 +87,7 @@ function enterPlan(plan: Plan) {
         <div class="plan-actions" @click.stop>
           <el-button size="small" @click="handleRename(plan)">重命名</el-button>
           <el-button size="small" @click="router.push('/history/'+plan.id)">历史</el-button>
+          <el-button size="small" @click="router.push('/stats/'+plan.id)">统计</el-button>
           <el-popconfirm
             title="删除后无法恢复，确定删除？"
             @confirm="planStore.deletePlan(plan.id!)"

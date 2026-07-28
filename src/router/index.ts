@@ -4,6 +4,7 @@ import Home from '@/views/Home.vue'
 import Plan from '@/views/Plan.vue'
 import Generate from '@/views/Generate.vue'
 import History from '@/views/History.vue'
+import Stats from '@/views/Stats.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -29,6 +30,12 @@ const routes: RouteRecordRaw[] = [
     name: 'History',
     component: History,
     meta: { title: '历史试卷' },
+  },
+  {
+    path: '/stats/:planId',
+    name: 'Stats',
+    component: Stats,
+    meta: { title: '数据统计' },
   },
 ]
 

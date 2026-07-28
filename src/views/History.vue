@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores/app'
 import { usePlanStore } from '@/stores/plan'
 import { usePaperStore } from '@/stores/paper'
 import { useQuestionBank } from '@/composables/useQuestionBank'
+import { downloadPdf } from '@/utils/pdfGenerator'
 import type { Paper, Plan, Question } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { ElMessage } from 'element-plus'
@@ -50,6 +51,25 @@ async function handleDelete(paperId: number) {
   const updated = planStore.plans.find((p) => p.id === planId)
   if (updated && plan.value) {
     plan.value = { ...updated }
+  }
+}
+
+async function handleExportPdf(paper: Paper) {
+  if (!plan.value) return
+  const qMap = new Map(questions.value.map((q) => [q.id, q]))
+  const qs = paper.questionIds.map((id) => qMap.get(id)).filter(Boolean) as Question[]
+  try {
+    await downloadPdf({
+      paper,
+      plan: plan.value!,
+      questions: qs,
+      bookName: getBookName(plan.value!.book),
+      subjectName: getSubjectName(plan.value!.subject),
+      sourceMode: 'chapter',
+    })
+  } catch (e) {
+    console.error('PDF export failed:', e)
+    ElMessage.error('PDF导出失败')
   }
 }
 
@@ -104,6 +124,7 @@ function formatDate(iso: string) {
         </div>
         <div class="paper-actions">
           <el-button size="small" @click="handleView(paper)">查看</el-button>
+          <el-button size="small" @click="handleExportPdf(paper)">导出PDF</el-button>
           <el-popconfirm
             title="删除后题目将恢复可抽取状态，确定删除？"
             @confirm="handleDelete(paper.id!)"
