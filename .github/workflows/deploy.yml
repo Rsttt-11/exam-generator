@@ -20,26 +20,20 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    defaults:
-      run:
-        working-directory: ./exam-generator
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: exam-generator/package-lock.json
 
       - name: Install dependencies
+        working-directory: ./exam-generator
         run: npm install
 
       - name: Build
+        working-directory: ./exam-generator
         run: npx vite build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
