@@ -9,9 +9,6 @@ class ExamDatabase extends Dexie {
     super('ExamGeneratorDB')
     this.version(1).stores({
       plans: '++id, subject, book, createdAt, updatedAt',
-    })
-    this.version(2).stores({
-      plans: '++id, subject, book, createdAt, updatedAt',
       papers: '++id, planId, createdAt',
     })
   }
