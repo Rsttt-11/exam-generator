@@ -14,7 +14,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0002",
@@ -31,7 +32,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0003",
@@ -48,7 +50,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0004",
@@ -65,7 +68,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0005",
@@ -82,7 +86,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0006",
@@ -99,7 +104,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0007",
@@ -116,7 +122,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0008",
@@ -133,7 +140,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0009",
@@ -150,7 +158,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0010",
@@ -167,7 +176,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0011",
@@ -184,7 +194,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0012",
@@ -201,7 +212,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0013",
@@ -218,7 +230,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0014",
@@ -235,7 +248,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0015",
@@ -252,7 +266,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0016",
@@ -269,7 +284,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0017",
@@ -286,7 +302,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0018",
@@ -303,7 +320,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0019",
@@ -320,7 +338,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0020",
@@ -337,7 +356,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0021",
@@ -354,7 +374,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0022",
@@ -371,7 +392,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0023",
@@ -388,7 +410,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
     "id": "M1-L880-C04-0024",
@@ -405,10 +428,11 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   },
   {
-    "id": "M1-L880-C04-0001",
+    "id": "M1-L880-C04-0025",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "advanced",
@@ -416,12 +440,13 @@
     "chapter": 4,
     "chapterName": "空间解析几何",
     "type": "answer",
-    "questionNumber": 1,
+    "questionNumber": 25,
     "page": 126,
     "content": "解答题\n求满足下列条件的动点的轨迹方程,并说明它们分别表示什么曲面.\n(I)动点到坐标原点的距离等于它到平面z=4的距离;\n(II)动点到坐标原点的距离等于它到点2,3,4  的距离的一半；\n(III)动点到点0,0,5 \n的距离等于它到x轴的距离;\n(IV)动点到x轴的距离等于它到yOz面的距离的两倍.",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "高数"
   }
 ]

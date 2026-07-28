@@ -23,6 +23,13 @@ export interface Plan {
   updatedAt: string
 }
 
+/** 分类（高数/线代/概率等） */
+export interface Category {
+  id: string
+  name: string
+  chapters: number[]
+}
+
 /** 分类（基础篇/综合篇/拓展篇等） */
 export interface Section {
   id: string
@@ -33,6 +40,7 @@ export interface Section {
 export interface ChapterMeta {
   id: number
   name: string
+  category?: string
 }
 
 /** 题库元数据（book.json） */
@@ -41,6 +49,7 @@ export interface BookMeta {
   name: string
   year: number
   subject: string
+  categories?: Category[]
   sections: Section[]
   chapters: ChapterMeta[]
 }

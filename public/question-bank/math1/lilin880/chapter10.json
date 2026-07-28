@@ -6,23 +6,6 @@
     "sectionId": "basic",
     "sectionName": "基础篇",
     "chapter": 10,
-    "chapterName": "第10章",
-    "type": "answer",
-    "questionNumber": 1,
-    "page": 2,
-    "content": "2027\n精讲精练880题\n做题本\n数一线概篇\n书籍作者： 李林\n目 录\n线代篇",
-    "answer": "",
-    "analysis": "",
-    "images": [],
-    "tags": []
-  },
-  {
-    "id": "M1-L880-C10-0001",
-    "subject": "math1",
-    "book": "lilin880",
-    "sectionId": "basic",
-    "sectionName": "基础篇",
-    "chapter": 10,
     "chapterName": "行列式",
     "type": "answer",
     "questionNumber": 1,
@@ -31,7 +14,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0002",
@@ -48,7 +32,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0003",
@@ -65,7 +50,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0004",
@@ -82,7 +68,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0005",
@@ -99,7 +86,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0006",
@@ -116,7 +104,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0007",
@@ -133,7 +122,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0008",
@@ -150,7 +140,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0009",
@@ -167,7 +158,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0010",
@@ -184,7 +176,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0011",
@@ -201,7 +194,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0012",
@@ -218,7 +212,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0013",
@@ -235,7 +230,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0014",
@@ -252,7 +248,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0015",
@@ -269,7 +266,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0016",
@@ -286,7 +284,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0017",
@@ -303,7 +302,8 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
     "id": "M1-L880-C10-0018",
@@ -320,10 +320,11 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0001",
+    "id": "M1-L880-C10-0019",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -331,16 +332,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "choice",
-    "questionNumber": 1,
+    "questionNumber": 19,
     "page": 9,
     "content": "(1)设A是3阶可逆矩阵，A-1的特征值为3,2,1，则A的代数余子式之和A\n11\n+A\n22\n+A\n33\n=( ).\n1 1 1\nA. B. C. D. 1\n6 3 2\n1 (2)设A是3阶方阵，A*是A的伴随矩阵，A= ，则 2A\n2\n  -1 -2A*=( ).\n1 1 1 1\nA. B. - C. - D.\n2 2 4 4",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0002",
+    "id": "M1-L880-C10-0020",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -348,16 +350,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "choice",
-    "questionNumber": 2,
+    "questionNumber": 20,
     "page": 10,
     "content": "(3)设fx \n1 x x2 x3\n \n1 2 4 8\n= ，则曲线y=fx\n1 -1 1 -1\n1 1 1 1\n 在-1,2 \n内存在水平切线的条数为( ).\nA. 1 B. 2 C. 3 D. 4\nA 3A*",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0003",
+    "id": "M1-L880-C10-0021",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -365,16 +368,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "blank",
-    "questionNumber": 3,
+    "questionNumber": 21,
     "page": 10,
     "content": "(1)设A,B均为n阶方阵，A=6，B=1，C= B\n\n2\n\n\n  -1\nO\n\n\n，则C=_____.\n 1 0 1",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0004",
+    "id": "M1-L880-C10-0022",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -382,16 +386,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "blank",
-    "questionNumber": 4,
+    "questionNumber": 22,
     "page": 10,
     "content": "(2)设A,B均为3阶方阵,满足A2B-A-B=E，若A=  0 2 0\n\n-2 0 1\n\n，则B=_____.",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0005",
+    "id": "M1-L880-C10-0023",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -399,16 +404,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "blank",
-    "questionNumber": 5,
+    "questionNumber": 23,
     "page": 11,
     "content": "(3)设A是3阶方阵,且满足A-E=A+2E=2A+3E=0，则2A*-3E=_____.",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0006",
+    "id": "M1-L880-C10-0024",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -416,16 +422,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "blank",
-    "questionNumber": 6,
+    "questionNumber": 24,
     "page": 11,
     "content": "(4)设A是3阶方阵，α ,α ,α 线性无关，且Aα =α +α ,Aα =α +α ,Aα =α +α ，则|A|=_\n1 2 3 1 1 2 2 2 3 3 3 1\n____.",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0007",
+    "id": "M1-L880-C10-0025",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -433,16 +440,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "blank",
-    "questionNumber": 7,
+    "questionNumber": 25,
     "page": 11,
     "content": "(5)设α,β,α ,α ,α 均为4维列向量,A= α,α ,α ,α\n1 2 3 1 2 3\n ,B= β,α ,α ,α\n1 2 3\n\n,且 A =2,B =1，则\nA-1+B-1 =_____.\n0 1 0 ⋯ 0\n0 0 2 ⋯ 0 ",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0008",
+    "id": "M1-L880-C10-0026",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -450,16 +458,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "blank",
-    "questionNumber": 8,
+    "questionNumber": 26,
     "page": 12,
     "content": "(6)设n阶行列式A= ⋮ ⋮ ⋮ ⋮ ,则A的第k行元素的代数余子式之和A\nk1\n+A\nk2\n+⋯\n0 0 0 ⋯ n-1\nn 0 0 ⋯ 0\n+A =_____.\nkn\nb-a2 -a a ⋯ -a a\n1 1 2 1 n\n \n-a a b-a2 ⋯ -a a",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0009",
+    "id": "M1-L880-C10-0027",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -467,16 +476,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "answer",
-    "questionNumber": 9,
+    "questionNumber": 27,
     "page": 12,
     "content": "(1)计算n阶行列式D = 2 1 2 2 n .\nn\n⋮ ⋮ ⋮\n-a a -a a ⋯ b-a2\nn 1 n 2 n\na+b a ⋯ a\n1\n \na a+b ⋯ a",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0010",
+    "id": "M1-L880-C10-0028",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -484,16 +494,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "answer",
-    "questionNumber": 10,
+    "questionNumber": 28,
     "page": 13,
     "content": "(2)计算n阶行列式D n = 2 b i ≠0\n⋮ ⋮ ⋮\na a ⋯ a+b\nn\n\n.\na -1 0 ⋯ 0 0\n0\n a 1 x -1 ⋯ 0 0\na 0 x ⋯ 0 0",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0011",
+    "id": "M1-L880-C10-0029",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -501,16 +512,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "answer",
-    "questionNumber": 11,
+    "questionNumber": 29,
     "page": 13,
     "content": "(3)计算n阶行列式D = 2 .\nn\n⋮ ⋮ ⋮ ⋮ ⋮\na 0 0 ⋯ x -1\nn-2\na 0 0 ⋯ 0 x\nn-1\na b 0 ⋯ 0 0\nc a b ⋯ 0 0\n0 c a ⋯ 0 0",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0012",
+    "id": "M1-L880-C10-0030",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "comprehensive",
@@ -518,16 +530,17 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "answer",
-    "questionNumber": 12,
+    "questionNumber": 30,
     "page": 14,
     "content": "(4)计算D n = a2-4bc≥0\n⋮ ⋮ ⋮ ⋮ ⋮\n0 0 0 ⋯ a b\n0 0 0 ⋯ c a\n\n.",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   },
   {
-    "id": "M1-L880-C10-0001",
+    "id": "M1-L880-C10-0031",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "advanced",
@@ -535,12 +548,13 @@
     "chapter": 10,
     "chapterName": "行列式",
     "type": "answer",
-    "questionNumber": 1,
+    "questionNumber": 31,
     "page": 15,
     "content": "解答题\n(1)设矩阵A为3阶非零实矩阵，AT=A*，且E+A=E-A=0，计算行列式A2-A-3E.\n(2)设A为3阶非零实矩阵，且AT=kA*(k为非零常数).\n(I)证明:A是可逆矩阵;\n(II)求行列式A-1 + A* \n-1  .",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "线代"
   }
 ]

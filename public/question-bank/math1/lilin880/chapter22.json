@@ -1,28 +1,11 @@
 [
   {
-    "id": "M1-L880-C303-0001",
+    "id": "M1-L880-C22-0001",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 303,
-    "chapterName": "假设检验203",
-    "type": "answer",
-    "questionNumber": 1,
-    "page": 3,
-    "content": "线性代数篇",
-    "answer": "",
-    "analysis": "",
-    "images": [],
-    "tags": []
-  },
-  {
-    "id": "M1-L880-C303-0001",
-    "subject": "math1",
-    "book": "lilin880",
-    "sectionId": "basic",
-    "sectionName": "基础篇",
-    "chapter": 303,
+    "chapter": 22,
     "chapterName": "假设检验",
     "type": "choice",
     "questionNumber": 1,
@@ -31,15 +14,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C303-0002",
+    "id": "M1-L880-C22-0002",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 303,
+    "chapter": 22,
     "chapterName": "假设检验",
     "type": "choice",
     "questionNumber": 2,
@@ -48,15 +32,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C303-0003",
+    "id": "M1-L880-C22-0003",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 303,
+    "chapter": 22,
     "chapterName": "假设检验",
     "type": "blank",
     "questionNumber": 3,
@@ -65,15 +50,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C303-0004",
+    "id": "M1-L880-C22-0004",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 303,
+    "chapter": 22,
     "chapterName": "假设检验",
     "type": "blank",
     "questionNumber": 4,
@@ -82,15 +68,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C303-0005",
+    "id": "M1-L880-C22-0005",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 303,
+    "chapter": 22,
     "chapterName": "假设检验",
     "type": "answer",
     "questionNumber": 5,
@@ -99,15 +86,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C303-0006",
+    "id": "M1-L880-C22-0006",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 303,
+    "chapter": 22,
     "chapterName": "假设检验",
     "type": "answer",
     "questionNumber": 6,
@@ -116,15 +104,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C303-0007",
+    "id": "M1-L880-C22-0007",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 303,
+    "chapter": 22,
     "chapterName": "假设检验",
     "type": "answer",
     "questionNumber": 7,
@@ -133,6 +122,7 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   }
 ]

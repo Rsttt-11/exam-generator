@@ -1,11 +1,11 @@
 [
   {
-    "id": "M1-L880-C302-0001",
+    "id": "M1-L880-C21-0001",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "blank",
     "questionNumber": 1,
@@ -14,15 +14,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0002",
+    "id": "M1-L880-C21-0002",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "blank",
     "questionNumber": 2,
@@ -31,15 +32,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0003",
+    "id": "M1-L880-C21-0003",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "blank",
     "questionNumber": 3,
@@ -48,15 +50,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0004",
+    "id": "M1-L880-C21-0004",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 4,
@@ -65,15 +68,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0005",
+    "id": "M1-L880-C21-0005",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 5,
@@ -82,15 +86,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0006",
+    "id": "M1-L880-C21-0006",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 6,
@@ -99,15 +104,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0007",
+    "id": "M1-L880-C21-0007",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 7,
@@ -116,15 +122,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0008",
+    "id": "M1-L880-C21-0008",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 8,
@@ -133,15 +140,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0009",
+    "id": "M1-L880-C21-0009",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 9,
@@ -150,15 +158,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0010",
+    "id": "M1-L880-C21-0010",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 10,
@@ -167,15 +176,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0011",
+    "id": "M1-L880-C21-0011",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 11,
@@ -184,15 +194,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0012",
+    "id": "M1-L880-C21-0012",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 12,
@@ -201,15 +212,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0013",
+    "id": "M1-L880-C21-0013",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 13,
@@ -218,15 +230,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0014",
+    "id": "M1-L880-C21-0014",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 14,
@@ -235,15 +248,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0015",
+    "id": "M1-L880-C21-0015",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 15,
@@ -252,15 +266,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0016",
+    "id": "M1-L880-C21-0016",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 16,
@@ -269,15 +284,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0017",
+    "id": "M1-L880-C21-0017",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 17,
@@ -286,15 +302,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0018",
+    "id": "M1-L880-C21-0018",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 18,
@@ -303,15 +320,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0019",
+    "id": "M1-L880-C21-0019",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 19,
@@ -320,15 +338,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0020",
+    "id": "M1-L880-C21-0020",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 20,
@@ -337,15 +356,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0021",
+    "id": "M1-L880-C21-0021",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 21,
@@ -354,15 +374,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0022",
+    "id": "M1-L880-C21-0022",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 22,
@@ -371,15 +392,16 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0023",
+    "id": "M1-L880-C21-0023",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "basic",
     "sectionName": "基础篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
     "questionNumber": 23,
@@ -388,23 +410,25 @@
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   },
   {
-    "id": "M1-L880-C302-0001",
+    "id": "M1-L880-C21-0024",
     "subject": "math1",
     "book": "lilin880",
     "sectionId": "advanced",
     "sectionName": "拓展篇",
-    "chapter": 302,
+    "chapter": 21,
     "chapterName": "参数估计",
     "type": "answer",
-    "questionNumber": 1,
+    "questionNumber": 24,
     "page": 204,
     "content": "解答题\n(1)设相互独立的随机变量X 1 ,X 2 ,⋯,X n 均服从Nμ,σ2  ，Y i =X i -μi=1,2,⋯,n \nn\n1\n,Y= Y. n i\ni=1\n(I)求Y 的概率密度;\n1\n(II)利用一阶矩求σ的矩估计量;\n(III)求EY和DY.\n(2)设总体X的概率密度为fx;θ \n2e -2x-θ\n=\n  , x>θ,\n 其中θθ>0\n0, x≤θ,\n 为未知参数,X 1 ,X 2 ,⋯,X n \n为\n来自总体X的简单随机样本.\n \n(I)求θ的矩估计量θ 与最大似然估计量θ ;\n1 2\n \n(II)问θ 和θ 是否为θ的无偏估计量?\n1 2\n       \n(III)将θ ,θ 修正为θ ,θ ,使θ ,θ 为θ的无偏估计,并比较θ ,θ 的有效性.\n1 2 3 4 3 4 3 4",
     "answer": "",
     "analysis": "",
     "images": [],
-    "tags": []
+    "tags": [],
+    "category": "概率"
   }
 ]

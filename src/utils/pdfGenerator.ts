@@ -14,29 +14,49 @@ export interface PdfOptions {
 }
 
 /**
- * Download a CJK font OTF from CDN and cache it in memory for the session.
- * Returns null if the download fails (Helvetica fallback will be used).
+ * Download a CJK font from CDN and cache it in memory for the session.
+ * Tries multiple CDN sources for reliability across different regions.
+ * Returns null if all downloads fail (Helvetica fallback will be used).
  */
-const FONT_URL =
-  'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/OTF/zh-Hans-CN/NotoSansCJKsc-Regular.otf'
+const FONT_URLS = [
+  // Primary: jsDelivr (fast globally)
+  'https://cdn.jsdelivr.net/gh/nicktoump/Noto-Sans-CJK-SC@master/NotoSansCJKsc-Regular.ttf',
+  // Fallback: GitHub raw
+  'https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/zh-Hans-CN/NotoSansCJKsc-Regular.otf',
+  // Fallback: unpkg
+  'https://unpkg.com/noto-sans-cjk-sc-regular@1.0.0/NotoSansCJKsc-Regular.ttf',
+]
+
 let fontCache: Uint8Array | null = null
 let pending: Promise<Uint8Array | null> | null = null
+
+async function tryFetchUrl(url: string): Promise<Uint8Array | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const buf = await res.arrayBuffer()
+    return new Uint8Array(buf)
+  } catch (e) {
+    console.warn(`PDF font download failed (${url}):`, e)
+    return null
+  }
+}
 
 async function getFontBytes(): Promise<Uint8Array | null> {
   if (fontCache) return fontCache
   if (pending) return pending
 
   pending = (async () => {
-    try {
-      const res = await fetch(FONT_URL)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const buf = await res.arrayBuffer()
-      fontCache = new Uint8Array(buf)
-      return fontCache
-    } catch (e) {
-      console.error('PDF Chinese font download failed:', e)
-      return null
+    // Try each URL in order until one succeeds
+    for (const url of FONT_URLS) {
+      const bytes = await tryFetchUrl(url)
+      if (bytes) {
+        fontCache = bytes
+        return fontCache
+      }
     }
+    console.error('All font download attempts failed, PDF will use Helvetica (no Chinese)')
+    return null
   })()
 
   return pending
@@ -76,6 +96,7 @@ async function buildPdfDoc(
     const s = opts?.size || 10
     const align = opts?.align || 'left'
     const x = align === 'center' ? pageWidth / 2 : margin
+    // Strip non-ASCII when no CJK font is available
     const safe = !fontBytes ? text.replace(/[^\x20-\x7E\t\n]/g, '') : text
     if (!safe) return
     page.drawText(safe, { x, y, font: f, size: s, color: rgb(0, 0, 0) })

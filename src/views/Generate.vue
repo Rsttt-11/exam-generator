@@ -7,7 +7,7 @@ import { usePaperStore } from '@/stores/paper'
 import { useSettingsStore } from '@/stores/settings'
 import { useQuestionBank } from '@/composables/useQuestionBank'
 import { generateExam } from '@/utils/examGenerator'
-import type { ExamConfig, Question, Plan } from '@/types'
+import type { ExamConfig, Question, Plan, Category } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { db } from '@/utils/db'
 import { ElMessage } from 'element-plus'
@@ -157,7 +157,7 @@ function getBookName(id: string) {
 
     <template v-else-if="meta">
       <div class="config-card">
-        <h2>分类</h2>
+        <h2>题型分类</h2>
         <el-checkbox-group v-model="config.sections">
           <el-checkbox v-for="s in meta.sections" :key="s.id" :value="s.id" :label="s.id">
             {{ s.name }}
@@ -170,19 +170,35 @@ function getBookName(id: string) {
         <el-checkbox
           :model-value="allChaptersSelected"
           @change="toggleAllChapters"
+          style="margin-bottom: 8px"
         >
           全选
         </el-checkbox>
-        <el-divider />
-        <el-checkbox-group v-model="config.chapters">
-          <el-checkbox
-            v-for="ch in meta.chapters"
-            :key="ch.id"
-            :label="ch.id"
-          >
-            第{{ ch.id }}章 {{ ch.name }}
-          </el-checkbox>
-        </el-checkbox-group>
+        <template v-if="meta.categories && meta.categories.length">
+          <div v-for="cat in meta.categories" :key="cat.id" class="category-group">
+            <h3 class="category-title">{{ cat.name }}</h3>
+            <el-checkbox-group v-model="config.chapters">
+              <el-checkbox
+                v-for="ch in cat.chapters.map(id => meta!.chapters.find(c => c.id === id)).filter(Boolean)"
+                :key="ch!.id"
+                :label="ch!.id"
+              >
+                第{{ ch!.id }}章 {{ ch!.name }}
+              </el-checkbox>
+            </el-checkbox-group>
+          </div>
+        </template>
+        <template v-else>
+          <el-checkbox-group v-model="config.chapters">
+            <el-checkbox
+              v-for="ch in meta.chapters"
+              :key="ch.id"
+              :label="ch.id"
+            >
+              第{{ ch.id }}章 {{ ch.name }}
+            </el-checkbox>
+          </el-checkbox-group>
+        </template>
       </div>
 
       <div class="config-card">
@@ -319,6 +335,20 @@ h1 {
   font-weight: 500;
   margin-bottom: 12px;
   color: var(--el-text-color-primary);
+}
+
+.category-group {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 6px;
+}
+
+.category-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  margin-bottom: 8px;
 }
 
 .type-counts {
