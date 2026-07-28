@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import { usePlanStore } from '@/stores/plan'
@@ -35,7 +35,44 @@ const config = ref<ExamConfig>({
   answer: settingsStore.settings.defaultAnswer,
 })
 
-const allChaptersSelected = ref(true)
+/** Track which categories are selected */
+const selectedCategories = ref<string[]>([])
+
+/** Compute chapter ids for each category */
+function categoryChapters(catId: string): number[] {
+  if (!meta.value?.categories) return []
+  const cat = meta.value.categories.find(c => c.id === catId)
+  return cat?.chapters || []
+}
+
+function toggleCategory(catId: string, checked: boolean) {
+  const chs = categoryChapters(catId)
+  if (checked) {
+    // Add all chapters of this category
+    const current = new Set(config.value.chapters)
+    chs.forEach(id => current.add(id))
+    config.value.chapters = [...current]
+  } else {
+    // Remove all chapters of this category
+    const remove = new Set(chs)
+    config.value.chapters = config.value.chapters.filter(id => !remove.has(id))
+  }
+}
+
+const allCategoriesSelected = computed(() => {
+  if (!meta.value?.categories) return false
+  return meta.value.categories.every(cat =>
+    cat.chapters.every(chId => config.value.chapters.includes(chId))
+  )
+})
+
+function toggleAllCategories() {
+  if (allCategoriesSelected.value) {
+    config.value.chapters = []
+  } else {
+    config.value.chapters = meta.value!.chapters.map(c => c.id)
+  }
+}
 
 onMounted(async () => {
   // Load plan directly from DB (not from potentially-filtered store)
@@ -52,6 +89,9 @@ onMounted(async () => {
   if (meta.value) {
     config.value.sections = meta.value.sections.map((s) => s.id)
     config.value.chapters = meta.value.chapters.map((c) => c.id)
+    if (meta.value.categories) {
+      selectedCategories.value = meta.value.categories.map(c => c.id)
+    }
     await loadAllQuestions(plan.value.subject, plan.value.book)
   }
 })
@@ -69,9 +109,8 @@ function toggleAllChapters() {
 
 watch(
   () => config.value.chapters,
-  (val) => {
-    if (!meta.value) return
-    allChaptersSelected.value = val.length === meta.value.chapters.length
+  () => {
+    // no-op: kept for future reactive needs
   },
 )
 
@@ -168,33 +207,29 @@ function getBookName(id: string) {
       <div class="config-card">
         <h2>章节</h2>
         <el-checkbox
-          :model-value="allChaptersSelected"
-          @change="toggleAllChapters"
-          style="margin-bottom: 8px"
+          :model-value="allCategoriesSelected"
+          @change="toggleAllCategories"
         >
           全选
         </el-checkbox>
         <template v-if="meta.categories && meta.categories.length">
           <div v-for="cat in meta.categories" :key="cat.id" class="category-group">
-            <h3 class="category-title">{{ cat.name }}</h3>
-            <el-checkbox-group v-model="config.chapters">
-              <el-checkbox
-                v-for="ch in cat.chapters.map(id => meta!.chapters.find(c => c.id === id)).filter(Boolean)"
-                :key="ch!.id"
-                :label="ch!.id"
-              >
-                第{{ ch!.id }}章 {{ ch!.name }}
-              </el-checkbox>
-            </el-checkbox-group>
+            <el-checkbox
+              :label="cat.name"
+              :checked="cat.chapters.every(id => config.chapters.includes(id))"
+              :indeterminate="cat.chapters.some(id => config.chapters.includes(id)) && !cat.chapters.every(id => config.chapters.includes(id))"
+              @change="(val: boolean) => toggleCategory(cat.id, val)"
+            >
+              <strong>{{ cat.name }}</strong>
+              <span style="margin-left: 8px; font-size: 12px; color: var(--el-text-color-secondary)">
+                {{ cat.chapters.length }}章
+              </span>
+            </el-checkbox>
           </div>
         </template>
         <template v-else>
           <el-checkbox-group v-model="config.chapters">
-            <el-checkbox
-              v-for="ch in meta.chapters"
-              :key="ch.id"
-              :label="ch.id"
-            >
+            <el-checkbox v-for="ch in meta.chapters" :key="ch.id" :label="ch.id">
               第{{ ch.id }}章 {{ ch.name }}
             </el-checkbox>
           </el-checkbox-group>

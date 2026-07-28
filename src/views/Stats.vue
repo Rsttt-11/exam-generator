@@ -52,6 +52,23 @@ function sectionTotal(sectionId: string): number {
 function sectionRemaining(sectionId: string): number {
   return sectionTotal(sectionId) - sectionUsedCount(sectionId)
 }
+
+/** Category stats */
+function categoryUsedCount(catId: string): number {
+  const cat = meta.value?.categories?.find(c => c.id === catId)
+  if (!cat) return 0
+  const usedSet = new Set(plan.value?.usedQuestions || [])
+  return questions.value.filter((q) => cat.chapters.includes(q.chapter) && usedSet.has(q.id)).length
+}
+function categoryTotal(catId: string): number {
+  const cat = meta.value?.categories?.find(c => c.id === catId)
+  if (!cat) return 0
+  return questions.value.filter((q) => cat.chapters.includes(q.chapter)).length
+}
+function categoryRemaining(catId: string): number {
+  return categoryTotal(catId) - categoryUsedCount(catId)
+}
+
 function chapterUsedCount(chapterId: number): number {
   const usedSet = new Set(plan.value?.usedQuestions || [])
   return questions.value.filter((q) => q.chapter === chapterId && usedSet.has(q.id)).length
@@ -96,12 +113,23 @@ function typeRemaining(type: string): number {
       </div>
       <div class="stat-card">
         <h2>分类完成度</h2>
-        <div v-for="s in meta.sections" :key="s.id" class="stat-item">
-          <div class="stat-label-row">
-            <span>{{ s.name }}</span>
-            <span class="stat-count">{{ sectionUsedCount(s.id) }} / {{ sectionTotal(s.id) }} <span class="remaining">剩 {{ sectionRemaining(s.id) }}</span></span>
+        <div v-if="meta.categories && meta.categories.length">
+          <div v-for="cat in meta.categories" :key="cat.id" class="stat-item">
+            <div class="stat-label-row">
+              <span><strong>{{ cat.name }}</strong></span>
+              <span class="stat-count">{{ categoryUsedCount(cat.id) }} / {{ categoryTotal(cat.id) }} <span class="remaining">剩 {{ categoryRemaining(cat.id) }}</span></span>
+            </div>
+            <el-progress :percentage="categoryTotal(cat.id)>0 ? Math.round(categoryUsedCount(cat.id)/categoryTotal(cat.id)*100) : 0" :stroke-width="14" />
           </div>
-          <el-progress :percentage="sectionTotal(s.id)>0 ? Math.round(sectionUsedCount(s.id)/sectionTotal(s.id)*100) : 0" :stroke-width="14" />
+        </div>
+        <div v-else>
+          <div v-for="s in meta.sections" :key="s.id" class="stat-item">
+            <div class="stat-label-row">
+              <span>{{ s.name }}</span>
+              <span class="stat-count">{{ sectionUsedCount(s.id) }} / {{ sectionTotal(s.id) }} <span class="remaining">剩 {{ sectionRemaining(s.id) }}</span></span>
+            </div>
+            <el-progress :percentage="sectionTotal(s.id)>0 ? Math.round(sectionUsedCount(s.id)/sectionTotal(s.id)*100) : 0" :stroke-width="14" />
+          </div>
         </div>
       </div>
       <div class="stat-card">
