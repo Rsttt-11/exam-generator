@@ -47,6 +47,8 @@ export const useSettingsStore = defineStore('settings', () => {
     await saveSettings()
   }
 
+  let themeMedia: MediaQueryList | null = null
+
   function applyTheme() {
     const t = settings.value.theme
     if (t === 'dark') {
@@ -59,6 +61,12 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  function setTheme(theme: 'light' | 'dark' | 'system') {
+    settings.value.theme = theme
+    applyTheme()
+    saveSettings()
+  }
+
   loadSettings()
 
   return {
@@ -69,5 +77,6 @@ export const useSettingsStore = defineStore('settings', () => {
     saveSettings,
     resetSettings,
     applyTheme,
+    setTheme,
   }
 })
