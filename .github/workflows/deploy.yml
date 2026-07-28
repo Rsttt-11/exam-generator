@@ -20,6 +20,9 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: ./exam-generator
     steps:
       - uses: actions/checkout@v4
 
@@ -30,12 +33,10 @@ jobs:
           cache-dependency-path: exam-generator/package-lock.json
 
       - name: Install dependencies
-        working-directory: ./exam-generator
-        run: npm ci
+        run: npm install
 
       - name: Build
-        working-directory: ./exam-generator
-        run: npm run build
+        run: npx vite build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
