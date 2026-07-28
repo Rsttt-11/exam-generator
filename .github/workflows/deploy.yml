@@ -28,17 +28,15 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        working-directory: ./exam-generator
         run: npm install
 
       - name: Build
-        working-directory: ./exam-generator
         run: npx vite build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./exam-generator/dist
+          path: ./dist
 
       - name: Deploy to GitHub Pages
         id: deployment
