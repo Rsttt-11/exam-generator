@@ -28,6 +28,7 @@ export const useSettingsStore = defineStore('settings', () => {
       console.error('Failed to load settings:', e)
     } finally {
       loaded.value = true
+      applyTheme()
     }
   }
 

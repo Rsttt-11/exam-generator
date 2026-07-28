@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import { usePlanStore } from '@/stores/plan'
 import { usePaperStore } from '@/stores/paper'
+import { useSettingsStore } from '@/stores/settings'
 import { useQuestionBank } from '@/composables/useQuestionBank'
 import { generateExam } from '@/utils/examGenerator'
 import type { ExamConfig, Question, Plan } from '@/types'
@@ -15,6 +16,7 @@ const router = useRouter()
 const appStore = useAppStore()
 const planStore = usePlanStore()
 const paperStore = usePaperStore()
+const settingsStore = useSettingsStore()
 const { meta, questions, loadBookMeta, loadAllQuestions, loading: qbLoading } = useQuestionBank()
 
 const planId = Number(route.params.planId)
@@ -27,9 +29,9 @@ const saved = ref(false)
 const config = ref<ExamConfig>({
   sections: [],
   chapters: [],
-  choice: 8,
-  blank: 6,
-  answer: 8,
+  choice: settingsStore.settings.defaultChoice,
+  blank: settingsStore.settings.defaultBlank,
+  answer: settingsStore.settings.defaultAnswer,
 })
 
 const allChaptersSelected = ref(true)
