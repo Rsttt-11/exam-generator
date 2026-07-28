@@ -39,6 +39,10 @@ function handleRename(plan: Plan) {
     planStore.renamePlan(plan.id!, value!)
   }).catch(() => {})
 }
+
+function enterPlan(plan: Plan) {
+  router.push(`/generate/${plan.id}`)
+}
 </script>
 
 <template>
@@ -68,6 +72,7 @@ function handleRename(plan: Plan) {
         v-for="plan in planStore.plans"
         :key="plan.id"
         class="plan-card"
+        @click="enterPlan(plan)"
       >
         <div class="plan-info">
           <h3>{{ plan.name }}</h3>
@@ -79,8 +84,9 @@ function handleRename(plan: Plan) {
             试卷 {{ plan.paperIds.length }} 套
           </p>
         </div>
-        <div class="plan-actions">
+        <div class="plan-actions" @click.stop>
           <el-button size="small" @click="handleRename(plan)">重命名</el-button>
+          <el-button size="small" @click="router.push('/history/'+plan.id)">历史</el-button>
           <el-popconfirm
             title="删除后无法恢复，确定删除？"
             @confirm="planStore.deletePlan(plan.id!)"
@@ -149,6 +155,12 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.plan-card:hover {
+  border-color: var(--el-color-primary);
 }
 
 .plan-info h3 {

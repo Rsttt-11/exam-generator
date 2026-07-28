@@ -1,0 +1,15 @@
+{
+  "id": "lilin880",
+  "name": "李林880",
+  "year": 2027,
+  "subject": "math1",
+  "sections": [
+    { "id": "basic", "name": "基础篇" },
+    { "id": "comprehensive", "name": "综合篇" },
+    { "id": "advanced", "name": "拓展篇" }
+  ],
+  "chapters": [
+    { "id": 1, "name": "函数、极限与连续" },
+    { "id": 2, "name": "导数与微分" }
+  ]
+}
