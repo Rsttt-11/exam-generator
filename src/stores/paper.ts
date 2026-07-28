@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { db } from '@/utils/db'
 import type { Paper, ExamConfig } from '@/types'
+import { usePlanStore } from '@/stores/plan'
 import { ElMessage } from 'element-plus'
 
 export const usePaperStore = defineStore('paper', () => {
@@ -28,6 +29,7 @@ export const usePaperStore = defineStore('paper', () => {
     questionIds: string[],
     config: ExamConfig,
   ): Promise<number | undefined> {
+    const planStore = usePlanStore()
     const count = papers.value.length
     const now = new Date().toISOString()
     const paper: Paper = {
@@ -43,16 +45,25 @@ export const usePaperStore = defineStore('paper', () => {
       paper.id = id
       papers.value.push(paper)
 
-      // Update plan: add question IDs and paper ID
+      // Update plan in DB
       const plan = await db.plans.get(planId)
       if (plan) {
         const updatedQuestions = [...new Set([...plan.usedQuestions, ...questionIds])]
         const updatedPapers = id ? [...plan.paperIds, id] : [...plan.paperIds]
-        await db.plans.update(planId, {
+        const updateData = {
           usedQuestions: updatedQuestions,
           paperIds: updatedPapers as number[],
           updatedAt: now,
-        })
+        }
+        await db.plans.update(planId, updateData)
+
+        // Also update in-memory plan so views see fresh data immediately
+        const localPlan = planStore.plans.find((p) => p.id === planId)
+        if (localPlan) {
+          localPlan.usedQuestions = updatedQuestions
+          localPlan.paperIds = updatedPapers as number[]
+          localPlan.updatedAt = now
+        }
       }
 
       return id
@@ -64,6 +75,7 @@ export const usePaperStore = defineStore('paper', () => {
   }
 
   async function deletePaper(paperId: number) {
+    const planStore = usePlanStore()
     const paper = papers.value.find((p) => p.id === paperId)
     if (!paper) return
 
@@ -77,11 +89,21 @@ export const usePaperStore = defineStore('paper', () => {
         const removeSet = new Set(paper.questionIds)
         const restoredQuestions = plan.usedQuestions.filter((q) => !removeSet.has(q))
         const restoredPapers = plan.paperIds.filter((pid) => pid !== paperId)
-        await db.plans.update(paper.planId, {
+        const now = new Date().toISOString()
+        const updateData = {
           usedQuestions: restoredQuestions,
           paperIds: restoredPapers,
-          updatedAt: new Date().toISOString(),
-        })
+          updatedAt: now,
+        }
+        await db.plans.update(paper.planId, updateData)
+
+        // Also update in-memory plan so views see fresh data immediately
+        const localPlan = planStore.plans.find((p) => p.id === paper.planId)
+        if (localPlan) {
+          localPlan.usedQuestions = restoredQuestions
+          localPlan.paperIds = restoredPapers
+          localPlan.updatedAt = now
+        }
       }
 
       ElMessage.success('试卷已删除，题目已恢复')

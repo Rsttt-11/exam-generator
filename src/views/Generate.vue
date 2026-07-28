@@ -9,6 +9,7 @@ import { useQuestionBank } from '@/composables/useQuestionBank'
 import { generateExam } from '@/utils/examGenerator'
 import type { ExamConfig, Question, Plan } from '@/types'
 import { TYPE_LABELS } from '@/types'
+import { db } from '@/utils/db'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -37,13 +38,15 @@ const config = ref<ExamConfig>({
 const allChaptersSelected = ref(true)
 
 onMounted(async () => {
-  await planStore.loadPlans()
-  plan.value = planStore.plans.find((p) => p.id === planId) || null
-  if (!plan.value) {
+  // Load plan directly from DB (not from potentially-filtered store)
+  const p = await db.plans.get(planId)
+  if (!p) {
     ElMessage.error('方案不存在')
     router.replace('/plan')
     return
   }
+  plan.value = p
+  await planStore.loadPlans()
 
   await loadBookMeta(plan.value.subject, plan.value.book)
   if (meta.value) {
@@ -101,20 +104,23 @@ function handleGenerate() {
 
     if (result.paper.length > 0) {
       const qIds = result.paper.map((q) => q.id)
-      paperStore.savePaper(plan.value!.id!, qIds, { ...config.value }).then(() => {
-        const updated = planStore.plans.find((p) => p.id === planId)
-        if (updated) {
-          plan.value = updated
-          planStore.plans = [...planStore.plans]
-        }
+      // Deep clone config to strip Vue reactive proxies (IndexedDB can't store them)
+      const cleanConfig = JSON.parse(JSON.stringify(config.value))
+      paperStore.savePaper(plan.value!.id!, qIds, cleanConfig).then(async () => {
+        const fresh = await db.plans.get(planId)
+        if (fresh) plan.value = fresh
         saved.value = true
         if (result.warnings.length === 0) {
           ElMessage.success('试卷生成成功，已自动保存')
         }
+        generating.value = false
+      }).catch(() => {
+        ElMessage.error('保存试卷失败')
+        generating.value = false
       })
+    } else {
+      generating.value = false
     }
-
-    generating.value = false
   }, 100)
 }
 
@@ -172,8 +178,7 @@ function getBookName(id: string) {
           <el-checkbox
             v-for="ch in meta.chapters"
             :key="ch.id"
-            :value="ch.id"
-            :label="String(ch.id)"
+            :label="ch.id"
           >
             第{{ ch.id }}章 {{ ch.name }}
           </el-checkbox>

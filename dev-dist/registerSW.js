@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/exam-generator/dev-sw.js?dev-sw', { scope: '/exam-generator/', type: 'classic' })

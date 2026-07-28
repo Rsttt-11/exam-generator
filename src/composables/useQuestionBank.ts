@@ -24,8 +24,6 @@ export function useQuestionBank() {
   }
 
   async function loadChapterQuestions(subject: string, bookId: string, chapterId: number) {
-    loading.value = true
-    error.value = ''
     try {
       const ch = String(chapterId).padStart(2, '0')
       const url = `./question-bank/${subject}/${bookId}/chapter${ch}.json`
@@ -38,7 +36,7 @@ export function useQuestionBank() {
       error.value = '加载题目失败'
       return []
     } finally {
-      loading.value = false
+      // loading is managed by loadAllQuestions
     }
   }
 

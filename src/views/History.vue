@@ -5,7 +5,7 @@ import { useAppStore } from '@/stores/app'
 import { usePlanStore } from '@/stores/plan'
 import { usePaperStore } from '@/stores/paper'
 import { useQuestionBank } from '@/composables/useQuestionBank'
-import { downloadPdf } from '@/utils/pdfGenerator'
+import { downloadPdf, previewPdf } from '@/utils/pdfGenerator'
 import type { Paper, Plan, Question } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { ElMessage } from 'element-plus'
@@ -22,6 +22,12 @@ const plan = ref<Plan | null>(null)
 const viewingPaper = ref<Paper | null>(null)
 const viewQuestions = ref<Question[]>([])
 const dialogVisible = ref(false)
+
+// PDF preview
+const previewDialogVisible = ref(false)
+const previewLoading = ref(false)
+const previewUrl = ref('')
+const previewPaperName = ref('')
 
 onMounted(async () => {
   await planStore.loadPlans()
@@ -48,10 +54,6 @@ function handleView(paper: Paper) {
 
 async function handleDelete(paperId: number) {
   await paperStore.deletePaper(paperId)
-  const updated = planStore.plans.find((p) => p.id === planId)
-  if (updated && plan.value) {
-    plan.value = { ...updated }
-  }
 }
 
 async function handleExportPdf(paper: Paper) {
@@ -70,6 +72,33 @@ async function handleExportPdf(paper: Paper) {
   } catch (e) {
     console.error('PDF export failed:', e)
     ElMessage.error('PDF导出失败')
+  }
+}
+
+async function handlePreview(paper: Paper) {
+  if (!plan.value) return
+  previewLoading.value = true
+  previewPaperName.value = paper.name
+  const qMap = new Map(questions.value.map((q) => [q.id, q]))
+  const qs = paper.questionIds.map((id) => qMap.get(id)).filter(Boolean) as Question[]
+  try {
+    const url = await previewPdf({
+      paper,
+      plan: plan.value!,
+      questions: qs,
+      bookName: getBookName(plan.value!.book),
+      subjectName: getSubjectName(plan.value!.subject),
+      sourceMode: 'chapter',
+    })
+    // Revoke old URL if exists
+    if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = url
+    previewDialogVisible.value = true
+  } catch (e) {
+    console.error('PDF preview failed:', e)
+    ElMessage.error('PDF预览生成失败')
+  } finally {
+    previewLoading.value = false
   }
 }
 
@@ -124,6 +153,7 @@ function formatDate(iso: string) {
         </div>
         <div class="paper-actions">
           <el-button size="small" @click="handleView(paper)">查看</el-button>
+          <el-button size="small" :loading="previewLoading" @click="handlePreview(paper)">预览PDF</el-button>
           <el-button size="small" @click="handleExportPdf(paper)">导出PDF</el-button>
           <el-popconfirm
             title="删除后题目将恢复可抽取状态，确定删除？"
@@ -166,6 +196,21 @@ function formatDate(iso: string) {
           </div>
         </template>
       </template>
+    </el-dialog>
+
+    <!-- PDF Preview Dialog -->
+    <el-dialog
+      v-model="previewDialogVisible"
+      :title="`PDF预览 - ${previewPaperName}`"
+      width="90%"
+      top="3vh"
+      fullscreen
+    >
+      <iframe
+        v-if="previewUrl"
+        :src="previewUrl"
+        style="width: 100%; height: calc(100vh - 120px); border: none;"
+      />
     </el-dialog>
   </div>
 </template>

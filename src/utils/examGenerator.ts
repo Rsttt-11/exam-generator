@@ -1,4 +1,5 @@
 import type { Question, ExamConfig } from '@/types'
+import { TYPE_LABELS } from '@/types'
 
 export interface GenerateResult {
   paper: Question[]
@@ -50,11 +51,12 @@ export function generateExam(
   function pick(type: string, count: number): Question[] {
     const available = byType[type] || []
     const shuffled = shuffle(available)
+    const label = TYPE_LABELS[type] || type
     if (shuffled.length < count) {
       if (shuffled.length > 0) {
-        warnings.push(`"${type}" 型题目剩余不足（需要 ${count} 道，仅剩 ${shuffled.length} 道）`)
+        warnings.push(`${label}剩余不足（需要 ${count} 道，仅剩 ${shuffled.length} 道）`)
       } else {
-        warnings.push(`"${type}" 型题目已全部抽取完毕`)
+        warnings.push(`${label}已全部抽取完毕`)
       }
       return shuffled
     }
