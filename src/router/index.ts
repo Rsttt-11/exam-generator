@@ -5,6 +5,7 @@ import Plan from '@/views/Plan.vue'
 import Generate from '@/views/Generate.vue'
 import History from '@/views/History.vue'
 import Stats from '@/views/Stats.vue'
+import Settings from '@/views/Settings.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -36,6 +37,12 @@ const routes: RouteRecordRaw[] = [
     name: 'Stats',
     component: Stats,
     meta: { title: '数据统计' },
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: Settings,
+    meta: { title: '设置' },
   },
 ]
 

@@ -89,3 +89,15 @@ export const TYPE_LABELS: Record<string, string> = {
   blank: '填空题',
   answer: '解答题',
 }
+
+/** 用户设置 */
+export interface UserSettings {
+  id?: string
+  defaultChoice: number
+  defaultBlank: number
+  defaultAnswer: number
+  pdfSourceMode: 'chapter' | 'page'
+  pdfFontSize: number
+  pdfMargin: number
+  theme: 'light' | 'dark' | 'system'
+}

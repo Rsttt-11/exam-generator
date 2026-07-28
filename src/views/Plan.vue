@@ -102,6 +102,7 @@ function enterPlan(plan: Plan) {
 
     <div class="back">
       <el-button @click="router.push('/')">返回首页</el-button>
+      <el-button @click="router.push('/settings')">设置</el-button>
     </div>
   </div>
 </template>
