@@ -108,9 +108,9 @@ def test_no_pdfplumber():
     # 模拟在没有 pdfplumber 时报错
     try:
         import pdfplumber  # noqa: F401
-        print("  ✓ pdfplumber 已安装")
+        print("  [OK] pdfplumber 已安装")
     except ImportError:
-        print("  ✗ 需要安装: pip install pdfplumber")
+        print("  [FAIL] 需要安装: pip install pdfplumber")
         return False
     return True
 
@@ -149,33 +149,33 @@ def test_parse_questions():
     chapters = set(q["chapter"] for q in questions)
     assert 1 in chapters, "缺失第一章"
     assert 2 in chapters, "缺失第二章"
-    print(f"  ✓ 章节正确: {sorted(chapters)}")
+    print(f"  [OK] 章节正确: {sorted(chapters)}")
 
     # 检查题型分类
     types = set(q["type"] for q in questions)
     assert "choice" in types, "缺少选择题"
     assert "blank" in types, "缺少填空题"
     assert "answer" in types, "缺少解答题"
-    print(f"  ✓ 题型正确: {types}")
+    print(f"  [OK] 题型正确: {types}")
 
     # 检查分类归属
     sections = set(q["sectionId"] for q in questions)
     assert "basic" in sections, "缺少基础篇"
     assert "comprehensive" in sections, "缺少综合篇"
     assert "advanced" in sections, "缺少拓展篇"
-    print(f"  ✓ 分类正确: {sections}")
+    print(f"  [OK] 分类正确: {sections}")
 
     # 检查 ID 生成
     for q in questions:
         assert q["id"].startswith("M1-L880-"), f"ID 格式错误: {q['id']}"
         assert len(q["id"].split("-")[-1]) == 4, f"题号格式错误: {q['id']}"
-    print(f"  ✓ ID 格式正确（示例: {questions[0]['id']}）")
+    print(f"  [OK] ID 格式正确（示例: {questions[0]['id']}）")
 
     # 输出到测试目录
     write_output(questions, args, {})
     output_dir = args.output
     files = os.listdir(output_dir)
-    print(f"\n  ✓ 输出文件: {files}")
+    print(f"\n  [OK] 输出文件: {files}")
 
     # 验证 chapter01.json
     ch1_path = os.path.join(output_dir, "chapter01.json")
@@ -208,9 +208,9 @@ if __name__ == "__main__":
     try:
         test_parse_questions()
     except AssertionError as e:
-        print(f"\n  ✗ 测试失败: {e}")
+        print(f"\n      [FAIL] 测试失败: {e}")
         sys.exit(1)
     except ImportError as e:
-        print(f"\n  ✗ 导入失败: {e}")
+        print(f"\n      [FAIL] 导入失败: {e}")
         print("  请确保 test_parser.py 和 parser.py 在同一个目录")
         sys.exit(1)

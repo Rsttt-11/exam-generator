@@ -77,8 +77,20 @@ def parse_questions(pages: list[dict], args) -> list[dict]:
     prefix = book_id_to_subject(args.subject) + "-" + book_id_to_prefix(args.book)
 
     # 尝试识别章节标题和分类
-    chapter_pattern = re.compile(r'(?:第?\s*(\d+)\s*章|Chapter\s*(\d+))\s*[：:]\s*(.+)')
+    # 支持阿拉伯数字和中文数字：第1章、第一章、Chapter 1
+    cn_nums = '一二三四五六七八九十'
+    chapter_pattern = re.compile(
+        r'(?:第\s*(\d+|[' + cn_nums + r']+)\s*章|Chapter\s*(\d+))\s*(?::|：|[ ])?\s*(.+)'
+    )
     section_pattern = re.compile(r'(基础篇|综合篇|拓展篇|A篇|B篇|C篇|提高篇|巩固篇)')
+
+    def cn_to_int(s):
+        """中文数字转阿拉伯数字"""
+        cn_map = dict(zip('一二三四五六七八九十', range(1, 11)))
+        total = 0
+        for ch in s:
+            total = total * 10 + cn_map.get(ch, 0)
+        return total
 
     current_buffer = ""
     current_type = None
@@ -99,7 +111,10 @@ def parse_questions(pages: list[dict], args) -> list[dict]:
                 current_buffer = ""
 
             ch_num = ch_match.group(1) or ch_match.group(2)
-            chapter_num = int(ch_num)
+            try:
+                chapter_num = int(ch_num)
+            except ValueError:
+                chapter_num = cn_to_int(ch_num)
             chapter_name = ch_match.group(3).strip()
             q_number = 0
             continue
@@ -207,7 +222,7 @@ def write_output(questions: list[dict], args, stats: dict):
         filepath = os.path.join(args.output, filename)
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(ch_questions, f, ensure_ascii=False, indent=2)
-        print(f"  ✓ 第{ch_num}章: {len(ch_questions)} 题 → {filename}")
+        print(f"  [OK] 第{ch_num}章: {len(ch_questions)} 题 → {filename}")
 
     # 统计各种题型
     type_count = {"choice": 0, "blank": 0, "answer": 0}
@@ -226,7 +241,7 @@ def write_output(questions: list[dict], args, stats: dict):
     report_path = os.path.join(args.output, "report.json")
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(stats, f, ensure_ascii=False, indent=2)
-    print(f"  ✓ 转换报告 → report.json")
+    print(f"  [OK] 转换报告 → report.json")
 
     print(f"\n总题数: {stats['total']}")
     print(f"选择题: {type_count['choice']}")
