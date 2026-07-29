@@ -109,7 +109,30 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
   let qnum = 0
   let qidCounter = 0
   let chPageStart = 0
+  let chPageEnd = 0
+  // 用于按比例分配页码
+  const chQuestionCounter: Record<number, number> = {}
+  let chIdForCounting = 0
 
+  // 第一遍：统计每章题数
+  for (const line of lines) {
+    const t = line.trim()
+    if (!t || t.startsWith('所有题本') || t.startsWith('# 精讲精练') || t.startsWith('书籍作者') ||
+        t.startsWith('题本再排') || t.startsWith('安静做题') || t.startsWith('## 目录') ||
+        t.match(/^\S+…+\d+$/) || t.match(/^\d+$/) || t.startsWith('---')) continue
+    const ch = t.match(CHAPTER_RE)
+    if (ch) {
+      const pid = parseCnNumber(ch[1])
+      if (pid !== null) chIdForCounting = pid
+      continue
+    }
+    if (t.startsWith('## ')) continue
+    if (t.match(QUESTION_RE) && chIdForCounting > 0) {
+      chQuestionCounter[chIdForCounting] = (chQuestionCounter[chIdForCounting] || 0) + 1
+    }
+  }
+
+  // 第二遍：解析题目并分配页码
   function detectSection(heading: string) {
     const trimmed = heading.replace(/^##\s+/, '').trim()
     // 基础题/综合题/拓展题
@@ -147,7 +170,10 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
       chapterName,
       type: curType,
       questionNumber: qnum,
-      page: chPageStart,
+      page: chPageStart + Math.min(
+        Math.floor((qidCounter - 1) * (Math.max(chPageEnd - chPageStart, 1)) / Math.max(chQuestionCounter[chapterId] || 1, 1)),
+        Math.max(chPageEnd - chPageStart, 0)
+      ),
       content,
       answer: '',
       analysis: '',
@@ -189,9 +215,10 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
         sectionName = '基础题'
         curType = 'choice'
         qidCounter = 0
-        // 查找章节页码
+        // 查找章节页码范围
         const range = ALL_RANGES.find(r => r[0] === chapterId)
         chPageStart = range ? range[2] : 0
+        chPageEnd = range ? range[3] : 0
       }
       continue
     }

@@ -98,8 +98,8 @@ body {
 .option-line {
   padding-left: 2.4em;
   font-size: 10.5pt;
-  line-height: 1.7;
-  margin-bottom: 2px;
+  line-height: 1.9;
+  margin-bottom: 6px;
 }
 .content-line {
   padding-left: 1.4em;

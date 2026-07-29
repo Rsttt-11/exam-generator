@@ -190,11 +190,15 @@ export function toLatex(raw: string): string {
   // 检测是否已含 LaTeX
   const hasLatex = /\$[^$]*\$/.test(raw)
   if (hasLatex) {
-    // 已有 LaTeX（Markdown 来源），只需清理可能的 PUA 残留
-    return raw
+    // 已有 LaTeX（Markdown 来源），只需清理
+    let s = raw
       .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
       .replace(/!\[image\]\([^)]*\)/g, '')
       .trim()
+    // 修复一些常见 LaTeX 问题：
+    // 1. 将行内数学模式下未转义的下划线补上（如 a_n 应为 $a_n$ 或 a\_n）
+    // 但矿工的 LaTeX 通常有 $...$ 包裹，不做额外修复
+    return s
   }
   // 纯文本（JSON 来源），做完整转换
   const cleaned = cleanPua(raw)
