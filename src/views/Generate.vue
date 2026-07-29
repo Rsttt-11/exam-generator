@@ -317,7 +317,7 @@ function getBookName(id: string) {
                     <span class="q-number">{{ idx + 1 }}</span>
                     <span class="q-source">{{ q.sectionName }} → 第{{ q.chapter }}章 → 第{{ q.questionNumber }}题</span>
                   </div>
-                  <div class="q-content">{{ toLatex(q.content) }}</div>
+                  <div class="q-content">{{ toLatex(q.content).replace(/!\[image\]\([^)]*\)/g, '') }}</div>
                 </div>
               </div>
             </template>

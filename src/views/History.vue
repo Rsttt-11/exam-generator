@@ -183,7 +183,7 @@ function formatDate(iso: string) {
                 第{{ idx + 1 }}题
                 <span class="dq-source">{{ q.sectionName }} → 第{{ q.chapter }}章 → 第{{ q.questionNumber }}题</span>
               </p>
-              <div class="dq-content">{{ toLatex(q.content) }}</div>
+              <div class="dq-content">{{ toLatex(q.content).replace(/!\[image\]\([^)]*\)/g, '') }}</div>
             </div>
           </div>
         </template>

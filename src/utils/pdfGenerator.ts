@@ -1,17 +1,17 @@
 /**
- * PDF 生成器 v5 — HTML + KaTeX 专业考卷排版
+ * PDF 生成器 v6 — HTML + KaTeX 专业考卷排版
  *
- * 生成包含 KaTeX 渲染数学公式的 HTML 页面（在 iframe 或新标签中打开），
+ * 生成包含 KaTeX 渲染数学公式的 HTML 页面，
  * 通过浏览器打印（Ctrl+P）导出为高质量 PDF。
  *
- * KaTeX 在预览页面中通过 CDN 按需加载（不增加应用主包体积）。
- *
- * 排版标准：
- * - A4 纸张，仿正式考卷版式
- * - 三大题型分板块：一、选择题 / 二、填空题 / 三、解答题
+ * 排版对标正规考研数学试卷：
+ * - A4 纸张，页边距 18mm/16mm
+ * - 封面简洁规范
+ * - 题型分块：一、选择题 / 二、填空题 / 三、解答题
  * - 全局连续题号
- * - 公式使用 KaTeX 渲染（支持积分/极限/矩阵/分式等）
- * - 末尾保留题目来源表
+ * - 选项 A. 单行排列
+ * - 解答题预留答题空白
+ * - 末尾题目来源表
  */
 
 import type { Question, Paper, Plan } from '@/types'
@@ -27,131 +27,131 @@ export interface PdfOptions {
   sourceMode: 'chapter' | 'page'
 }
 
-// ─── 样式模板 ──────────────────────────────────────────
-
 const STYLE = `
 @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
 @media print {
-  html, body { width: 210mm; }
-  body { margin: 0; padding: 0; }
+  html, body { width: 210mm; margin: 0; padding: 0; }
+  .no-break { page-break-inside: avoid; }
 }
 * { box-sizing: border-box; }
 body {
-  font-family: "Source Han Sans CN", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
-  font-size: 11pt;
-  line-height: 1.75;
+  font-family: "Source Han Sans CN", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.8;
   color: #000;
-  padding: 0;
   margin: 0;
+  padding: 0;
 }
 
 /* 封面 */
 .exam-header {
   text-align: center;
-  margin: 40px 0 24px 0;
+  margin: 60px 0 28px 0;
 }
 .exam-title {
   font-size: 26pt;
   font-weight: bold;
   letter-spacing: 4px;
-  margin-bottom: 6px;
 }
 .exam-subtitle {
   font-size: 20pt;
   font-weight: bold;
-  margin-bottom: 14px;
-  color: #222;
+  margin: 4px 0 16px 0;
 }
 .exam-divider {
   border: none;
   border-top: 2px solid #333;
   margin: 8px auto 16px auto;
-  width: 80%;
+  width: 70%;
 }
 .exam-meta {
   font-size: 11pt;
-  line-height: 2.2;
+  line-height: 2.0;
 }
 .exam-summary {
   font-size: 10.5pt;
   margin-top: 10px;
-  color: #333;
 }
 
 /* 题型标题 */
 .section-header {
-  font-size: 13pt;
+  font-size: 12pt;
   font-weight: bold;
-  margin: 28px 0 12px 0;
-  padding-bottom: 6px;
-  border-bottom: 1.5px solid #999;
+  margin: 24px 0 12px 0;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid #666;
 }
 
-/* 题目 */
+/* 题目区 */
 .question-block {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   page-break-inside: avoid;
 }
 .question-text {
-  font-size: 11pt;
+  font-size: 10.5pt;
   line-height: 1.8;
 }
 .q-number {
   font-weight: bold;
-  margin-right: 0.3em;
+  margin-right: 0.4em;
 }
 .option-line {
-  padding-left: 2.2em;
-  font-size: 11pt;
+  padding-left: 2.4em;
+  font-size: 10.5pt;
   line-height: 1.7;
 }
 .content-line {
-  padding-left: 1.2em;
-  font-size: 11pt;
-  line-height: 1.7;
+  padding-left: 1.4em;
+  font-size: 10.5pt;
+  line-height: 1.8;
 }
 .answer-space {
-  min-height: 60px;
+  min-height: 50px;
 }
 
 /* 来源 */
 .source-section {
-  margin-top: 36px;
-  padding-top: 12px;
+  margin-top: 30px;
+  padding-top: 10px;
   border-top: 2px solid #666;
 }
 .source-title {
-  font-size: 11pt;
+  font-size: 10.5pt;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .source-item {
-  font-size: 8.5pt;
-  line-height: 1.7;
-  color: #444;
-  padding-left: 0.5em;
+  font-size: 8pt;
+  line-height: 1.6;
+  color: #555;
 }
 
 /* KaTeX 调整 */
-.katex { font-size: 1.05em; }
-.katex-display { margin: 0.3em 0; }
-
-.page-break { page-break-after: always; }
+.katex { font-size: 1.08em; }
+.katex-display { margin: 0.4em 0; text-align: center; }
 `
-
-// ─── 工具 ──────────────────────────────────────────────
 
 function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 /**
- * 将一行内容中 `$...$` 包裹的片段替换为 KaTeX 渲染容器，
- * 其他内容保持 HTML 转义文本。
+ * 清理内容：去除 MinerU 插入的图片标记、合并异常换行
  */
+function cleanContent(raw: string): string {
+  // 去除 ![...](url)
+  let s = raw.replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+  // 去除单独残留的图片引用行
+  s = s.replace(/^\[image\].*$/gm, '')
+  // 去除空行和仅空格行
+  s = s.replace(/^\s*[\n\r]/gm, '\n')
+  // 去除多余的空白行
+  s = s.replace(/\n{3,}/g, '\n\n')
+  return s.trim()
+}
+
 function renderMixedLine(line: string): string {
   if (!line) return ''
-  // 按 $...$ 分割
   const parts = line.split(/(\$[^$]*\$)/g)
   return parts.map(part => {
     if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
@@ -163,16 +163,13 @@ function renderMixedLine(line: string): string {
   }).join('')
 }
 
-// ─── 题目 → HTML ───────────────────────────────────────
-
-/**
- * 智能渲染：Markdown 模式直接传透 LaTeX，JSON 模式自动转换
- */
 function renderQuestion(q: Question, globalNo: number): string {
   const rawContent = toLatex(q.content)
-  // 按换行分割，不做额外重排（保留 LaTeX 完整性）
-  const lines = rawContent.split('\n').map(l => l.trim()).filter(Boolean)
-  let html = '<div class="question-block">'
+  const cleaned = cleanContent(rawContent)
+  const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean)
+  if (lines.length === 0) return ''
+
+  let html = '<div class="question-block no-break">'
 
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li]
@@ -181,7 +178,7 @@ function renderQuestion(q: Question, globalNo: number): string {
     if (li === 0) {
       html += `<div class="question-text"><span class="q-number">${globalNo}.</span> ${renderMixedLine(line)}</div>`
     } else if (isOpt) {
-      const optText = line.replace(/^([A-D])\s*[.、）)]\s*/, '$1. ')
+      const optText = line.replace(/^([A-D])\s*[.、）)]\s*/, '$1.  ')
       html += `<div class="option-line">${renderMixedLine(optText)}</div>`
     } else {
       html += `<div class="content-line">${renderMixedLine(line)}</div>`
@@ -197,35 +194,22 @@ function renderQuestion(q: Question, globalNo: number): string {
   return html
 }
 
-// ─── 内联 KaTeX ───────────────────────────────────────
-
-interface KatexBundles {
-  css: string
-  js: string
-}
-
+interface KatexBundles { css: string; js: string }
 let katexBundleCache: KatexBundles | null = null
 
 async function loadKatexBundles(): Promise<KatexBundles | null> {
   if (katexBundleCache) return katexBundleCache
   try {
-    // 从 public 目录预编译的 base64 文件读取 KaTeX
     const resp = await fetch('./katex-base64.json')
     if (!resp.ok) throw new Error('HTTP ' + resp.status)
     const data = await resp.json()
-    const bundles: KatexBundles = {
-      css: atob(data.css),
-      js: atob(data.js),
-    }
-    katexBundleCache = bundles
-    return bundles
+    katexBundleCache = { css: atob(data.css), js: atob(data.js) }
+    return katexBundleCache
   } catch (e) {
     console.warn('Failed to load KaTeX bundles:', e)
     return null
   }
 }
-
-// ─── 构建完整 HTML ─────────────────────────────────────
 
 async function buildHtml(opts: PdfOptions): Promise<string> {
   const { paper, plan, questions, subjectName } = opts
@@ -267,7 +251,7 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
   }
 
   // 来源
-  body += '<div class="source-section">'
+  body += '<div class="source-section no-break">'
   body += '<div class="source-title">题目来源</div>'
   questions.forEach((q, idx) => {
     const src = `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题(P${q.page})]`
@@ -275,35 +259,26 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
   })
   body += '</div>'
 
-  // ─── 内联 KaTeX ───────────────────────────────────────
-  // 预先读取 KaTeX 文件并内联到 HTML 中（iframe/blob URL 无法动态引用外部文件）
   const katexData = await loadKatexBundles()
-  if (!katexData) {
-    return ''
-  }
+  if (!katexData) return ''
 
-  // 客户端 KaTeX 渲染脚本
   const script = `
   <script>
   (function() {
     var css = document.createElement('style');
     css.textContent = ${JSON.stringify(katexData.css)};
     document.head.appendChild(css);
-
-    var script = document.createElement('script');
-    script.textContent = ${JSON.stringify(katexData.js)};
-    document.body.appendChild(script);
-
-    var checkKatex = setInterval(function() {
+    var js = document.createElement('script');
+    js.textContent = ${JSON.stringify(katexData.js)};
+    document.body.appendChild(js);
+    var check = setInterval(function() {
       if (typeof katex !== 'undefined') {
-        clearInterval(checkKatex);
+        clearInterval(check);
         document.querySelectorAll('.katex-html[data-latex]').forEach(function(el) {
           try {
             var latex = decodeURIComponent(el.getAttribute('data-latex'));
             el.outerHTML = katex.renderToString(latex, { throwOnError: false, displayMode: false });
-          } catch(e) {
-            el.style.color = '#c00';
-          }
+          } catch(e) { el.style.color = '#c00'; }
         });
       }
     }, 50);
@@ -312,48 +287,30 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <style>${STYLE}</style>
 <title>${escHtml(plan.name)} - ${escHtml(paper.name)}</title>
 </head>
-<body>
-${body}
-${script}
-</body>
-</html>`
+<body>${body}${script}</body></html>`
 }
 
-// ─── 导出接口 ──────────────────────────────────────────
-
-/**
- * 预览 PDF（在新标签页中打开可打印的 HTML）
- */
 export async function previewPdf(opts: PdfOptions): Promise<string> {
   const html = await buildHtml(opts)
-  if (!html) {
-    return fallbackHtml(opts)
-  }
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-  return URL.createObjectURL(blob)
+  if (!html) return fallbackHtml(opts)
+  return URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }))
 }
 
 function fallbackHtml(opts: PdfOptions): string {
-  const { plan, paper } = opts
+  const { plan } = opts
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>${STYLE}</style>
-<title>${escHtml(plan.name)} - ${escHtml(paper.name)}</title></head>
+<title>${escHtml(plan.name)}</title></head>
 <body>
-<p style="color:#c00;text-align:center;margin:40px;font-size:14px;">
-公式渲染加载中，请刷新页面或稍后重试</p>
+<p style="color:#c00;text-align:center;margin:40px;font-size:14px;">公式渲染组件加载中，请刷新后重试</p>
 </body></html>`
 }
 
-/**
- * 下载 PDF（打开打印对话框）
- */
 export async function downloadPdf(opts: PdfOptions) {
   const url = await previewPdf(opts)
   const w = window.open(url, '_blank')
@@ -362,7 +319,7 @@ export async function downloadPdf(opts: PdfOptions) {
       try {
         if (w.document.readyState === 'complete') {
           clearInterval(timer)
-          setTimeout(() => w.print(), 800)
+          setTimeout(() => w.print(), 1000)
         }
       } catch {}
     }, 200)

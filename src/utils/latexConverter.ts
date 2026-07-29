@@ -191,7 +191,10 @@ export function toLatex(raw: string): string {
   const hasLatex = /\$[^$]*\$/.test(raw)
   if (hasLatex) {
     // 已有 LaTeX（Markdown 来源），只需清理可能的 PUA 残留
-    return raw.replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
+    return raw
+      .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
+      .replace(/!\[image\]\([^)]*\)/g, '')
+      .trim()
   }
   // 纯文本（JSON 来源），做完整转换
   const cleaned = cleanPua(raw)
