@@ -182,28 +182,52 @@ function wrapMathSegments(s: string, _aggressive: boolean): string {
  * 将题目内容转换为适合 KaTeX 渲染的文本。
  *
  * 自动检测模式：
- * - 如果内容包含 $...$（已有 LaTeX），直接透传（仅清理 PUA 残留）
+ * - 如果内容包含 $...$ 或 $$...$$（已有 LaTeX），做清理 + 合并 $$ 块
  * - 否则做完整 PUA→Unicode→$ 包裹转换
  */
 export function toLatex(raw: string): string {
   if (!raw) return ''
-  // 检测是否已含 LaTeX
-  const hasLatex = /\$[^$]*\$/.test(raw)
-  if (hasLatex) {
+  // 检测是否已含 LaTeX（含 $$ 显示数学）
+  const hasLatex = /\$[^$]*\$/.test(raw) || /\$\$[\s\S]*?\$\$/.test(raw)
+  if (hasLatex || raw.includes('$$')) {
     // 已有 LaTeX（Markdown 来源），只需清理
     let s = raw
       .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
       .replace(/!\[image\]\([^)]*\)/g, '')
       .trim()
-    // 修复一些常见 LaTeX 问题：
-    // 1. 将行内数学模式下未转义的下划线补上（如 a_n 应为 $a_n$ 或 a\_n）
-    // 但矿工的 LaTeX 通常有 $...$ 包裹，不做额外修复
+    // 合并 $$...$$ 跨越换行的块
+    s = mergeDisplayMath(s)
     return s
   }
   // 纯文本（JSON 来源），做完整转换
   const cleaned = cleanPua(raw)
   const lines = cleaned.split('\n')
   return lines.map(line => wrapMathInLine(line)).join('\n')
+}
+
+/**
+ * 合并 $$...$$ 显示数学块（MinerU 格式：$$ 和内容单独成行）
+ * "$$\n\\begin{matrix}...\\end{matrix}\n$$" → "$$\\begin{matrix}...\\end{matrix}$$"
+ */
+function mergeDisplayMath(s: string): string {
+  // 保护行内 $...$ 不被打扰，只合并 $$...$$ 块
+  return s.replace(/\$\$\s*([\s\S]*?)\s*\$\$/g, (_, inner: string) => {
+    const cleaned = inner.replace(/\s+/g, ' ').trim()
+    return cleaned ? '$$' + cleaned + '$$' : ''
+  })
+}
+
+/**
+ * 将 LaTeX 内容转为纯可读文本（不含 $、$$ 标记），用于 Vue 预览
+ */
+export function toPlainText(raw: string): string {
+  if (!raw) return ''
+  const latex = toLatex(raw)
+  return latex
+    .replace(/\$\$([^$]*)\$\$/g, '$1')
+    .replace(/\$([^$]*)\$/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /**

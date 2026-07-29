@@ -108,6 +108,7 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
   let buf: string[] = []
   let qnum = 0
   let qidCounter = 0
+  let embeddedNum = 0
   let chPageStart = 0
   let chPageEnd = 0
   // 用于按比例分配页码
@@ -142,10 +143,15 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
       sectionName = secMatch[1]
       return true
     }
-    // 一、选择题 / 二、填空题 / 三、解答题
+    // 一、选择题 / 二、填空题 / 三、解答题（含数字前缀）
     const typeMatch = trimmed.match(/^[一二三]+[.、）)]?\s*(选择题|填空题|解答题)$/)
     if (typeMatch) {
       curType = TYPE_MAP[typeMatch[1]] || 'choice'
+      return true
+    }
+    // 裸的 ## 选择题 / ## 填空题 / ## 解答题（拓展题/综合题内常见）
+    if (TYPE_MAP[trimmed]) {
+      curType = TYPE_MAP[trimmed]
       return true
     }
     return false
@@ -187,7 +193,7 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
     const raw = lines[i]
     const trimmed = raw.trim()
 
-    // 跳过目录区域、封面页、空行
+    // 跳过目录区域、封面页、水印行、空行
     if (!trimmed ||
         trimmed.startsWith('所有题本') ||
         trimmed.startsWith('# 精讲精练') ||
@@ -197,7 +203,9 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
         trimmed.startsWith('## 目录') ||
         trimmed.match(/^\S+…+\d+$/) ||  // 目录行 "基础题....2"
         trimmed.match(/^\d+$/) ||  // 纯页码行
-        trimmed.startsWith('---')
+        trimmed.startsWith('---') ||
+        // 水印行（MinerU 遗留）
+        /水印|nocode\.host|免费获取|转卖/.test(trimmed)
     ) {
       continue
     }
@@ -234,15 +242,49 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
     }
 
     // 题目编号 (1) (2) ...
-    // 注意：MinerU 会把 D 选项和下一个题号连在同一行（无换行）：
-    //   D. $\lim_{x\to\infty}f(x)=1$ (4) 设当 $x\to+\infty$ 时...
-    // 这种情况在 pdfGenerator 渲染时检测并拆分
     const qMatch = trimmed.match(QUESTION_RE)
     if (qMatch) {
       flush()
       qnum = parseInt(qMatch[1])
       buf = [trimmed]
       continue
+    }
+
+    // 行内嵌入式题号：D. $...$ (4) 设当... → 拆成两题
+    // 行首不是 ( 但行中间有 (N)（不在 $...$ 内），说明两题被 MinerU 粘一起了
+    if (!trimmed.match(QUESTION_RE)) {
+      // 找出 $...$ 之外的 (N) 模式
+      const segs = trimmed.split(/(\$[^$]*\$)/g)
+      let rebuilt = ''
+      let embeddedIdx = -1
+      embeddedNum = 0
+      for (let si = 0; si < segs.length; si++) {
+        // 跳过数学模式内的内容
+        if (si % 2 === 1) { rebuilt += segs[si]; continue }
+        // 在非数学文本中查找 (N)
+        const rest = segs[si]
+        const embMatch = rest.match(/\((\d+)\)/)
+        if (embMatch) {
+          const idx = rest.indexOf(embMatch[0])
+          rebuilt += rest.substring(0, idx)
+          embeddedNum = parseInt(embMatch[1])
+          embeddedIdx = rebuilt.length
+          rebuilt += rest.substring(idx)
+        } else {
+          rebuilt += rest
+        }
+      }
+      if (embeddedNum > 0 && buf.length > 0 && !trimmed.startsWith('(')) {
+        // 把前半部分（D 选项）追加到当前题
+        const before = rebuilt.substring(0, embeddedIdx).trim()
+        if (before) buf.push(before)
+        // 后半部分作为新题
+        flush()
+        qnum = embeddedNum
+        const after = rebuilt.substring(embeddedIdx).trim()
+        buf = [after]
+        continue
+      }
     }
 
     // 子题号 (I) (II) (III)

@@ -144,9 +144,9 @@ function cleanContent(raw: string): string {
   let s = raw.replace(/!\[[^\]]*\]\([^)]*\)/g, '')
   // 去除单独残留的图片引用行
   s = s.replace(/^\[image\].*$/gm, '')
-  // 去除空行和仅空格行
-  s = s.replace(/^\s*[\n\r]/gm, '\n')
-  // 去除多余的空白行
+  // 保留 $$ 行，仅去除空行和仅空格行
+  s = s.replace(/^[ \t]+$/gm, '')
+  // 去除多余的空白行（不超过2个连续换行）
   s = s.replace(/\n{3,}/g, '\n\n')
   return s.trim()
 }
@@ -159,6 +159,13 @@ function cleanContent(raw: string): string {
  */
 function splitOptionsAndQuestions(line: string): string[] {
   let s = line
+
+  // Step 0: 保护 $$...$$ 显示数学块（临时替换为占位符避免被后续拆分破坏）
+  const displayMathBlocks: string[] = []
+  s = s.replace(/\$\$[\s\S]*?\$\$/g, (m) => {
+    displayMathBlocks.push(m)
+    return `\x00DISPLAY_MATH_${displayMathBlocks.length - 1}\x00`
+  })
 
   // Step 1: 在任何 A. B. C. D. 选项前断行（注意不要在 $ 数学模式内触发）
   const parts = s.split(/(\$[^$]*\$)/g)
@@ -173,6 +180,9 @@ function splitOptionsAndQuestions(line: string): string[] {
   // Step 2: 如果 D 选项行包含题号（(N)），断开
   s = s.replace(/([Dd]\.\s*[^$]*?)\s*\((\d+)\)(\s*)/g, '$1\n\n($2) ')
 
+  // 恢复显示数学块
+  s = s.replace(/\x00DISPLAY_MATH_(\d+)\x00/g, (_, idx) => displayMathBlocks[parseInt(idx)] || '')
+
   // Step 3: 如果数字选项挤在一起 A.xx B.xx 中间没有换行时强制拆分
   const result = s.split('\n').map(l => l.trim()).filter(Boolean)
 
@@ -182,6 +192,18 @@ function splitOptionsAndQuestions(line: string): string[] {
 
 function renderMixedLine(line: string): string {
   if (!line) return ''
+  // 处理 $$...$$ 显示数学（整行）
+  const trimmed = line.trim()
+  if (trimmed.startsWith('$$') && trimmed.endsWith('$$') && trimmed.length > 4) {
+    const inner = trimmed.slice(2, -2).trim()
+    const encoded = encodeURIComponent(inner)
+    return `<div class="katex-display-wrap"><span class="katex-display-html" data-latex="${encoded}">${escHtml(inner)}</span></div>`
+  }
+  // 裸 $$ 或 $$...$$ 长度为0/2/3/4 → 忽略
+  if (trimmed === '$$' || trimmed === '$$ ') {
+    return ''
+  }
+  // 处理 $...$ 行内数学
   const parts = line.split(/(\$[^$]*\$)/g)
   return parts.map(part => {
     if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
@@ -200,16 +222,43 @@ function renderQuestion(q: Question, globalNo: number): string {
   if (rawLines.length === 0) return ''
 
   // 展开压缩的行（A.xxx B.xxx 同行 或 D.xxx (N)同行）
-  const lines: string[] = []
+  const expandedLines: string[] = []
   for (const line of rawLines) {
     const parts = splitOptionsAndQuestions(line)
-    lines.push(...parts)
+    expandedLines.push(...parts)
+  }
+
+  // 合并 $$...$$ 显示数学块（MinerU 格式：$$ 和内容分行）
+  const mergedLines: string[] = []
+  let i = 0
+  while (i < expandedLines.length) {
+    const line = expandedLines[i]
+    // 遇到 $$ 开始块
+    if (line === '$$' || line === '$$ ') {
+      const blockLines: string[] = []
+      i++
+      while (i < expandedLines.length && expandedLines[i] !== '$$') {
+        blockLines.push(expandedLines[i])
+        i++
+      }
+      // 跳过闭合 $$
+      if (i < expandedLines.length) i++
+      // 合并成一个行：$$内容$$
+      const blockContent = blockLines.join(' ')
+      if (blockContent.trim()) {
+        mergedLines.push('$$' + blockContent.trim() + '$$')
+      }
+    } else {
+      mergedLines.push(line)
+      i++
+    }
   }
 
   let html = '<div class="question-block no-break">'
 
-  for (let li = 0; li < lines.length; li++) {
-    const line = lines[li]
+  for (let li = 0; li < mergedLines.length; li++) {
+    const line = mergedLines[li]
+    if (!line) continue
     const isOpt = /^[A-D]\s*[.、）)]/.test(line)
 
     if (li === 0) {
@@ -313,10 +362,17 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
     var check = setInterval(function() {
       if (typeof katex !== 'undefined') {
         clearInterval(check);
-        document.querySelectorAll('.katex-html[data-latex]').forEach(function(el) {
+        document.querySelectorAll('span.katex-html[data-latex]').forEach(function(el) {
           try {
             var latex = decodeURIComponent(el.getAttribute('data-latex'));
             el.outerHTML = katex.renderToString(latex, { throwOnError: false, displayMode: false });
+          } catch(e) { el.style.color = '#c00'; }
+        });
+        // 显示数学 $$...$$
+        document.querySelectorAll('div.katex-display-wrap span.katex-display-html[data-latex]').forEach(function(el) {
+          try {
+            var latex = decodeURIComponent(el.getAttribute('data-latex'));
+            el.outerHTML = katex.renderToString(latex, { throwOnError: false, displayMode: true });
           } catch(e) { el.style.color = '#c00'; }
         });
       }
