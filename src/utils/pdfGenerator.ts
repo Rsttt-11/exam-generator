@@ -392,14 +392,7 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
 export async function previewPdf(opts: PdfOptions): Promise<string> {
   const html = await buildHtml(opts)
   if (!html) return fallbackHtml(opts)
-  // 返回完整的 HTML 字符串（移动端用 srcdoc 内嵌）
   return html
-}
-
-export async function previewPdfUrl(opts: PdfOptions): Promise<string> {
-  const html = await previewPdf(opts)
-  if (!html) return fallbackHtml(opts)
-  return URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }))
 }
 
 function fallbackHtml(opts: PdfOptions): string {
@@ -439,29 +432,24 @@ export async function downloadPdf(opts: PdfOptions) {
 }
 
 /**
- * 下载为 .html 文件（移动端友好方案）
- * 手机打开后可用「分享 → 打印为 PDF」导出
+ * 下载为 .html 文件（移动端：系统分享 → 打印/PDF；桌面端：下载文件）
  */
 export async function downloadHtml(opts: PdfOptions) {
   const { plan, paper } = opts
   const html = await buildHtml(opts)
   if (!html) return
 
-  // 优先尝试 navigator.share（移动端原生分享 → 可存为 PDF）
+  // 移动端优先用 navigator.share
   if (navigator.share) {
     try {
-      // Blob + File API
       const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
       const file = new File([blob], `${plan.name}-${paper.name}.html`, { type: 'text/html;charset=utf-8' })
       await navigator.share({ files: [file], title: plan.name })
       return
-    } catch (e) {
-      // 用户取消分享或设备不支持 files → 继续降级
-    }
+    } catch {}
   }
 
-  // 降级：data: URI 下载（兼容所有移动浏览器）
-  // 注意：不改变当前页面地址，用 <a download> 触发下载
+  // 通用降级：data: URI 通过 <a download> 下载
   const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent(html)
   const a = document.createElement('a')
   a.href = dataUri

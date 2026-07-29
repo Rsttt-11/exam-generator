@@ -25,9 +25,17 @@ const viewQuestions = ref<Question[]>([])
 const dialogVisible = ref(false)
 
 const previewDialogVisible = ref(false)
-const previewLoading = ref(false)
 const previewHtml = ref('')
 const previewPaperName = ref('')
+
+/** 每张试卷的加载状态（预览/导出分别跟踪） */
+const loadingMap = ref<Record<string, boolean>>({})
+function setLoading(paperId: number, action: 'preview' | 'export', val: boolean) {
+  loadingMap.value[`${paperId}-${action}`] = val
+}
+function isLoading(paperId: number, action: 'preview' | 'export'): boolean {
+  return !!loadingMap.value[`${paperId}-${action}`]
+}
 
 onMounted(async () => {
   await planStore.loadPlans()
@@ -57,6 +65,7 @@ async function handleDelete(paperId: number) {
 
 async function handleExportPdf(paper: Paper) {
   if (!plan.value) return
+  setLoading(paper.id!, 'export', true)
   const qMap = new Map(questions.value.map((q) => [q.id, q]))
   const qs = paper.questionIds.map((id) => qMap.get(id)).filter(Boolean) as Question[]
   try {
@@ -69,12 +78,14 @@ async function handleExportPdf(paper: Paper) {
   } catch (e) {
     console.error('PDF export failed:', e)
     ElMessage.error('PDF导出失败')
+  } finally {
+    setLoading(paper.id!, 'export', false)
   }
 }
 
 async function handlePreview(paper: Paper) {
   if (!plan.value) return
-  previewLoading.value = true
+  setLoading(paper.id!, 'preview', true)
   previewPaperName.value = paper.name
   const qMap = new Map(questions.value.map((q) => [q.id, q]))
   const qs = paper.questionIds.map((id) => qMap.get(id)).filter(Boolean) as Question[]
@@ -91,7 +102,7 @@ async function handlePreview(paper: Paper) {
     console.error('PDF preview failed:', e)
     ElMessage.error('PDF预览生成失败')
   } finally {
-    previewLoading.value = false
+    setLoading(paper.id!, 'preview', false)
   }
 }
 
@@ -154,12 +165,24 @@ function formatDate(iso: string) {
         </div>
 
         <div class="paper-actions">
-          <el-button size="small" text @click="handleView(paper)">👁️ 查看</el-button>
-          <el-button size="small" text :loading="previewLoading" @click="handlePreview(paper)">📄 预览PDF</el-button>
-          <el-button size="small" text @click="handleExportPdf(paper)">⬇️ 导出PDF</el-button>
-          <el-popconfirm title="删除后题目将恢复可抽取状态，确定删除？" @confirm="handleDelete(paper.id!)">
+          <el-button size="small" :loading="isLoading(paper.id!, 'preview')" @click="handlePreview(paper)">
+            <template #icon><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></template>
+            {{ isLoading(paper.id!, 'preview') ? '加载中…' : '预览' }}
+          </el-button>
+          <el-button size="small" :loading="isLoading(paper.id!, 'export')" @click="handleExportPdf(paper)">
+            <template #icon><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></template>
+            {{ isLoading(paper.id!, 'export') ? '生成中…' : '导出' }}
+          </el-button>
+          <el-button size="small" @click="handleView(paper)">
+            <template #icon><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></template>
+            题目
+          </el-button>
+          <el-popconfirm title="删除后题目将恢复，确定删除？" @confirm="handleDelete(paper.id!)">
             <template #reference>
-              <el-button size="small" text type="danger">🗑️ 删除</el-button>
+              <el-button size="small" type="danger" plain>
+                <template #icon><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></template>
+                删除
+              </el-button>
             </template>
           </el-popconfirm>
         </div>
@@ -218,8 +241,30 @@ function formatDate(iso: string) {
 /* Paper List */
 .paper-list { display: flex; flex-direction: column; gap: 16px; }
 
-.paper-card { padding: 20px; display: flex; flex-direction: column; gap: 16px; transition: all var(--transition-normal); }
-.paper-card:hover { box-shadow: var(--shadow-lg); }
+.paper-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+.paper-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--bg-gradient);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+.paper-card:hover::before { opacity: 1; }
+.paper-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateX(4px);
+}
 
 .paper-top { display: flex; align-items: center; gap: 14px; }
 .paper-icon {
@@ -227,9 +272,11 @@ function formatDate(iso: string) {
   border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   color: var(--color-primary-500);
-  background: var(--el-color-primary-light-9);
+  background: linear-gradient(135deg, var(--el-color-primary-light-9), var(--el-color-primary-light-7));
   flex-shrink: 0;
+  transition: transform var(--transition-fast);
 }
+.paper-card:hover .paper-icon { transform: scale(1.08); }
 .paper-info { flex: 1; min-width: 0; }
 .paper-info h3 { font-size: 17px; font-weight: 600; }
 .paper-meta { font-size: 13px; color: var(--el-text-color-secondary); margin-top: 2px; }
@@ -250,7 +297,8 @@ function formatDate(iso: string) {
   width: 1px; height: 28px; background: var(--el-border-color-light);
 }
 
-.paper-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.paper-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.paper-actions .el-button { transition: all var(--transition-fast); }
 
 /* Dialog */
 .dialog-type-section { margin-bottom: 20px; }

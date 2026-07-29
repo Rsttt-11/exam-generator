@@ -193,11 +193,28 @@ function enterPlan(plan: Plan) {
   flex-direction: column;
   gap: 16px;
   transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
 }
+.plan-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--bg-gradient);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+.plan-card:hover::before { opacity: 1; }
 .plan-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--el-color-primary);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--color-primary-400);
+}
+.plan-card:active {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .plan-top {
