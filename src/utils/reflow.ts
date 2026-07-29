@@ -1,66 +1,110 @@
 /**
- * 智能排版 — 修复 PDF 解析导致的文本断裂
- * 在渲染层面做行合并，不修改数据源
+ * 题目内容清洗与排版
+ *
+ * 对 PDF 提取已损坏的数据做最大可读化渲染
+ * - 不修改 JSON 源文件
+ * - 只在渲染层做合并和清理
  */
 
-/** 渲染题目：合并断裂行 + 分离选项 */
+// ─── PUA 残留字符映射（浏览器端兜底） ─────────────────────
+
+function mapPua(s: string): string {
+  if (!s) return s
+  let depth_ee = 0, depth_cb = 0, depth_ed = 0
+  return [...s].map(ch => {
+    if (ch === '\u{F0EE}') return (depth_ee++ % 2 === 0) ? '(' : ')'
+    if (ch === '\u{F0CB}') return (depth_cb++ % 2 === 0) ? '[' : ']'
+    if (ch === '\u{F0ED}') return (depth_ed++ % 2 === 0) ? '[' : ']'
+    if (ch === '\u{F0EA}') return ']'
+    if ('\u{F0EC}' === ch) return '('
+    if ('\u{F0EB}' === ch) return ')'
+    if ('\u{F0F4}\u{F0F6}\u{F0E2}'.includes(ch)) return '|'
+    if ('\u{F0B6}' === ch) return '∫'
+    if ('\u{F0B1}' === ch) return '∑'
+    if ('\u{F0E8}\u{F0E0}\u{F0E3}'.includes(ch)) return '{'
+    if ('\u{F0E9}\u{F0E1}\u{F0E4}'.includes(ch)) return '}'
+    if ('\u{F0DC}' === ch) return '['
+    if ('\u{F0B7}' === ch) return '·'
+    if ('\u{F092}' === ch) return '→'
+    if ('\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}'.includes(ch)) return ''
+    return ch
+  }).join('')
+}
+
+// ─── 行重排 ──────────────────────────────────────────
+
+/**
+ * 渲染题目内容：处理 PDF 提取产生的断裂行
+ *
+ * 断裂模式示例（原始数据）：
+ *   "limf(x\nx→∞\n)\n=1" → "limf(x  →  )\n=1"
+ *
+ * 合并规则：
+ *   ① 纯数字短行 → 连接到上行尾部（分数/下标）
+ *   ② 闭合括号开头行 → 连接到上行尾部（断裂回接）
+ *   ③ 极限标记行 (x→∞) → 连接到上行尾部
+ *   ④ 小写字母续行 (dx, n=1) → 连接到上行尾部
+ *   ⑤ A/B/C/D 挤在一行 → 拆分成独立行
+ */
 export function reflowQuestion(raw: string): string {
-  let lines = raw.split('\n').map(l => l.trim()).filter(Boolean)
+  let s = mapPua(raw)
+  const rawLines = s.split('\n').map(l => l.trim()).filter(Boolean)
 
-  const result: string[] = []
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+  const out: string[] = []
+  for (const line of rawLines) {
     const isOpt = /^[A-D]\s*[.、）)]/.test(line)
 
     if (isOpt) {
-      // 选项行：拆开挤在一起的选项
+      // 选项：拆开挤在一起的
       const parts = line.split(/(?=[A-D]\s*[.、）)])/).filter(Boolean)
-      for (const p of parts) {
-        if (p.trim()) result.push(p.trim())
-      }
+      for (const p of parts) if (p.trim()) out.push(p.trim())
       continue
     }
 
-    // 非选项行：判断是否应该合并到上一行
-    const prev = result[result.length - 1]
+    if (out.length === 0) { out.push(line); continue }
 
-    if (!prev) { result.push(line); continue }
+    const prev = out[out.length - 1]
+    if (/^[A-D]\s*[.、）)]/.test(prev)) { out.push(line); continue }
 
-    // 合并条件：
-    const isShort = line.length <= 8        // 短行（数字、dx、π、n=1 等）
-    const isJustNum = /^[\d\-+·π∞e^{}]+$/.test(line) // 纯数字/符号行
-    const isParenClose = /^[)}\]]/.test(line) // 闭合括号开头
-    const isContinuation = /^[a-z×÷=+→，]/.test(line)  // 小写字母/符号开头（续行）
+    const plain = line.replace(/\s/g, '')
+    const len = plain.length
 
-    if (isJustNum || isParenClose) {
-      // 分数/下标：合并
-      result[result.length - 1] = prev + line
-      continue
+    // 合并条件
+    const isNumIsland = len <= 6 && /^[\d\-+·π∞e^{}.,;:]+$/.test(plain)
+    const isParenClose = /^[)}\]]/.test(line.trim())
+    const isLimitTag = /^(x|n|k)\s*→/.test(line.trim())
+    const isContinuation = len <= 6 && /^[a-z×÷=+,→]/.test(line.trim())
+
+    if (isNumIsland || isParenClose) {
+      out[out.length - 1] = prev + line.trim()
+    } else if (isLimitTag || isContinuation) {
+      out[out.length - 1] = prev + ' ' + line.trim()
+    } else {
+      out.push(line)
     }
-
-    if (isShort && isContinuation) {
-      result[result.length - 1] = prev + ' ' + line
-      continue
-    }
-
-    result.push(line)
   }
 
-  return result.join('\n')
+  // 清理空格
+  let result = out.join('\n')
+  result = result.replace(/\s{2,}/g, ' ')
+  result = result.replace(/\(\s+/g, '(').replace(/\s+\)/g, ')')
+  result = result.replace(/\[\s+/g, '[').replace(/\s+\]/g, ']')
+  result = result.split('\n').map(l => l.trim()).join('\n').trim()
+
+  return result
 }
 
-/** 一行一行分离选项（用于 PDF 渲染） */
+/** 分割成渲染行（选项独立） */
 export function splitToLines(text: string): string[] {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-  const result: string[] = []
+  const out: string[] = []
   for (const line of lines) {
     if (/^[A-D]\s*[.、）)]/.test(line)) {
       const parts = line.split(/(?=[A-D]\s*[.、）)])/).filter(Boolean)
-      for (const p of parts) if (p.trim()) result.push(p.trim())
+      for (const p of parts) if (p.trim()) out.push(p.trim())
     } else {
-      result.push(line)
+      out.push(line)
     }
   }
-  return result
+  return out
 }
