@@ -99,6 +99,7 @@ body {
   padding-left: 2.4em;
   font-size: 10.5pt;
   line-height: 1.7;
+  margin-bottom: 2px;
 }
 .content-line {
   padding-left: 1.4em;
@@ -150,6 +151,23 @@ function cleanContent(raw: string): string {
   return s.trim()
 }
 
+/**
+ * 拆分选项后的题号：MinerU 经常会写成
+ *   D. $\lim_{x\to\infty}f(x)=1$ (4) 设当 $x\to+\infty$ 时...
+ * 需要在 (4) 前插入换行
+ * 同时也拆分选项内部：A. xxx B. xxx → 多行
+ */
+function splitOptionsAndQuestions(line: string): string[] {
+  // Step 1: 把 A.xxx B.xxx C.xxx D.xxx 拆成多行
+  // 只在有多个选项同行时拆分，避免破坏已换行的选项
+  const optBreak = line.replace(/\s+(?=[A-D]\s*[.、）)])(?![^$]*\$)/g, '\n')
+
+  // Step 2: 如果 D 选项行包含题号（(N)），断开
+  const withQuestionBreak = optBreak.replace(/(D\..*?)\s*\((\d+)\)\s*/g, '$1\n\n($2) ')
+
+  return withQuestionBreak.split('\n').map(s => s.trim()).filter(Boolean)
+}
+
 function renderMixedLine(line: string): string {
   if (!line) return ''
   const parts = line.split(/(\$[^$]*\$)/g)
@@ -166,8 +184,15 @@ function renderMixedLine(line: string): string {
 function renderQuestion(q: Question, globalNo: number): string {
   const rawContent = toLatex(q.content)
   const cleaned = cleanContent(rawContent)
-  const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean)
-  if (lines.length === 0) return ''
+  const rawLines = cleaned.split('\n').map(l => l.trim()).filter(Boolean)
+  if (rawLines.length === 0) return ''
+
+  // 展开压缩的行（A.xxx B.xxx 同行 或 D.xxx (N)同行）
+  const lines: string[] = []
+  for (const line of rawLines) {
+    const parts = splitOptionsAndQuestions(line)
+    lines.push(...parts)
+  }
 
   let html = '<div class="question-block no-break">'
 
@@ -250,11 +275,13 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
     }
   }
 
-  // 来源
+  // 来源（保留原题页码，从 q.page 获取）
+  // pdf 页码不准确（MinerU 输出不含页码），显示章节来源
   body += '<div class="source-section no-break">'
   body += '<div class="source-title">题目来源</div>'
   questions.forEach((q, idx) => {
-    const src = `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题(P${q.page})]`
+    const pg = q.page > 0 ? `(P${q.page})` : ''
+    const src = `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题${pg}]`
     body += `<div class="source-item">第${idx + 1}题：${escHtml(src)}</div>`
   })
   body += '</div>'

@@ -173,6 +173,9 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
     }
 
     // 题目编号 (1) (2) ...
+    // 注意：MinerU 会把 D 选项和下一个题号连在同一行（无换行）：
+    //   D. $\lim_{x\to\infty}f(x)=1$ (4) 设当 $x\to+\infty$ 时...
+    // 这种情况在 pdfGenerator 渲染时检测并拆分
     const qMatch = trimmed.match(QUESTION_RE)
     if (qMatch) {
       flush()
