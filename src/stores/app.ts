@@ -12,10 +12,8 @@ export const useAppStore = defineStore('app', () => {
     { id: 'math3', name: '数学三' },
   ]
 
-  const bookList: Book[] = [
+  const books: Book[] = [
     { id: 'lilin880', name: '李林880', subject: 'math1' },
-    { id: 'lilin880', name: '李林880', subject: 'math2' },
-    { id: 'lilin880', name: '李林880', subject: 'math3' },
   ]
 
   function setSubject(subject: string) {
@@ -28,16 +26,16 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function getBooksBySubject(subjectId: string): Book[] {
-    return bookList.filter((b) => b.subject === subjectId)
+    return books.filter((b) => b.subject === subjectId)
   }
 
   return {
     currentSubject,
     currentBook,
     subjects,
-    books: bookList,
-    getBooksBySubject,
+    books,
     setSubject,
     setBook,
+    getBooksBySubject,
   }
 })

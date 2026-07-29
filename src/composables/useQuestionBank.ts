@@ -11,13 +11,13 @@ export function useQuestionBank() {
   /** 题库格式类型 */
   const bankMode = ref<'json' | 'markdown'>('json')
 
-  const bankRoot = 'math1' // 题库文件只有 math1 目录，所有类别共用
+  const bankRoot = 'math1' // 题库文件只有 math1 目录
 
   async function loadBookMeta(_subject: string, bookId: string) {
     loading.value = true
     error.value = ''
     try {
-      // 优先尝试 Markdown 题库（统一用 math1 路径，对所有考试类别共用）
+      // 优先尝试 Markdown 题库
       let url = `./markdown-bank/${bankRoot}/${bookId}/book.json`
       let res = await fetch(url)
       if (res.ok) {
