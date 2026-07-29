@@ -11,12 +11,14 @@ export function useQuestionBank() {
   /** 题库格式类型 */
   const bankMode = ref<'json' | 'markdown'>('json')
 
-  async function loadBookMeta(subject: string, bookId: string) {
+  const bankRoot = 'math1' // 题库文件只有 math1 目录，所有类别共用
+
+  async function loadBookMeta(_subject: string, bookId: string) {
     loading.value = true
     error.value = ''
     try {
-      // 优先尝试 Markdown 题库
-      let url = `./markdown-bank/${subject}/${bookId}/book.json`
+      // 优先尝试 Markdown 题库（统一用 math1 路径，对所有考试类别共用）
+      let url = `./markdown-bank/${bankRoot}/${bookId}/book.json`
       let res = await fetch(url)
       if (res.ok) {
         meta.value = await res.json()
@@ -25,7 +27,7 @@ export function useQuestionBank() {
       }
 
       // 降级到 JSON 题库
-      url = `./question-bank/${subject}/${bookId}/book.json`
+      url = `./question-bank/${bankRoot}/${bookId}/book.json`
       res = await fetch(url)
       if (res.ok) {
         meta.value = await res.json()
@@ -47,7 +49,7 @@ export function useQuestionBank() {
       // JSON 模式
       if (bankMode.value === 'json') {
         const ch = String(chapterId).padStart(2, '0')
-        const url = `./question-bank/${subject}/${bookId}/chapter${ch}.json`
+        const url = `./question-bank/${bankRoot}/${bookId}/chapter${ch}.json`
         const res = await fetch(url)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data: Question[] = await res.json()
@@ -66,7 +68,7 @@ export function useQuestionBank() {
       }
       if (!mdFile) return []
 
-      const url = `./markdown-bank/${subject}/${bookId}/${mdFile}.md`
+      const url = `./markdown-bank/${bankRoot}/${bookId}/${mdFile}.md`
       const res = await fetch(url)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const text = await res.text()
@@ -91,7 +93,7 @@ export function useQuestionBank() {
         const categories = meta.value.categories || []
         const all: Question[] = []
         for (const cat of categories) {
-          const url = `./markdown-bank/${subject}/${bookId}/${cat.id}.md`
+          const url = `./markdown-bank/${bankRoot}/${bookId}/${cat.id}.md`
           const res = await fetch(url)
           if (!res.ok) continue
           const text = await res.text()
