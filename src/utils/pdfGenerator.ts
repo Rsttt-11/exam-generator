@@ -1,16 +1,13 @@
 /**
- * PDF 生成器 v3
- * - 本地字体优先（public/fonts/），CDN 保底
- * - 字体全部不可用时优雅提示降级
- * - 智能换行排版
+ * PDF 生成器 v4 — 考卷排版
+ * - 真实试卷布局：一、选择题 → 二、填空题 → 三、解答题
+ * - 去除来源 ID 代码
+ * - 紧凑美观排版
  */
 
 import { PDFDocument, rgb } from 'pdf-lib'
-import type { PDFFont, PDFPage } from 'pdf-lib'
+import type { PDFFont } from 'pdf-lib'
 import type { Question, Paper, Plan } from '@/types'
-import { TYPE_LABELS } from '@/types'
-
-// Fontkit registered lazily inside buildPdfDoc (first embedFont call)
 
 export interface PdfOptions {
   paper: Paper
@@ -21,40 +18,29 @@ export interface PdfOptions {
   sourceMode: 'chapter' | 'page'
 }
 
-// ─── 字体加载策略 ──────────────────────────────────────
+const PAGE_W = 595, PAGE_H = 842 // A4
+const MARGIN = 58  // 左右
+const MARGIN_T = 50  // 上
+const MARGIN_B = 40  // 下
+
+// ─── 字体 ──────────────────────────────────────────────
 
 const FONT_URLS = [
-  // ① 本地字体（优先级最高，零网络失败）
   './fonts/SourceHanSansCN-Regular.otf',
-  // ② CDN 保底（Adobe 官方仓库）
   'https://cdn.jsdelivr.net/gh/adobe-fonts/source-han-sans@release/SubsetOTF/CN/SourceHanSansCN-Regular.otf',
-  // ③ 备用 jsDelivr 镜像
-  'https://cdn.jsdelivr.net/gh/niutech/Source-Han-Sans@gh-pages/SubsetOTF/CN/SourceHanSansCN-Regular.otf',
 ]
 
 let fontCache: Uint8Array | null = null
 
-async function fetchFontBytes(): Promise<Uint8Array | null> {
+async function fetchFont(): Promise<Uint8Array | null> {
   if (fontCache) return fontCache
-
   for (const url of FONT_URLS) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(15000) })
-      if (!res.ok) {
-        console.warn(`[PDF] Font fetch failed: ${url} → HTTP ${res.status}`)
-        continue
-      }
+      const res = await fetch(url, { signal: AbortSignal.timeout(12000) })
+      if (!res.ok) continue
       const bytes = new Uint8Array(await res.arrayBuffer())
-      if (bytes.length < 1000) {
-        console.warn(`[PDF] Font too small: ${url} → ${bytes.length} bytes`)
-        continue
-      }
-      fontCache = bytes
-      console.log(`[PDF] Font loaded from: ${url} (${(bytes.length / 1024).toFixed(0)}KB)`)
-      return bytes
-    } catch (e: any) {
-      console.warn(`[PDF] Font fetch failed: ${url} → ${e?.message || e}`)
-    }
+      if (bytes.length > 1000) { fontCache = bytes; return bytes }
+    } catch { /* next */ }
   }
   return null
 }
@@ -64,20 +50,14 @@ async function fetchFontBytes(): Promise<Uint8Array | null> {
 function renderText(raw: string): string {
   if (!raw) return ''
   return raw
-    .replace(/\u{F0EE}/g, '(')          // 
-    .replace(/\u{F0CB}/g, '[')          // 
-    .replace(/\u{F0ED}/g, '[')          // 
-    .replace(/\u{F0EA}/g, ']')          // 
-    .replace(/\u{F0EC}/g, '(')          // 
-    .replace(/\u{F0EB}/g, ')')          // 
-    .replace(/\u{F0F4}|\u{F0F6}|\u{F0E2}/g, '|')  // 
-    .replace(/\u{F0B6}/g, '∫')          // 
-    .replace(/\u{F0B1}/g, '∑')          // 
+    .replace(/\u{F0EE}/g, '(').replace(/\u{F0CB}/g, '[')
+    .replace(/\u{F0ED}/g, '[').replace(/\u{F0EA}/g, ']')
+    .replace(/\u{F0EC}/g, '(').replace(/\u{F0EB}/g, ')')
+    .replace(/[\u{F0F4}\u{F0F6}\u{F0E2}]/g, '|')
+    .replace(/\u{F0B6}/g, '∫').replace(/\u{F0B1}/g, '∑')
     .replace(/[\u{F0E8}\u{F0E0}\u{F0E3}]/g, '{')
     .replace(/[\u{F0E9}\u{F0E1}\u{F0E4}]/g, '}')
-    .replace(/\u{F0DC}/g, '[')
-    .replace(/\u{F0B7}/g, '·')
-    .replace(/\u{F092}/g, '→')
+    .replace(/\u{F0DC}/g, '[').replace(/\u{F0B7}/g, '·').replace(/\u{F092}/g, '→')
     .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/g, '')
     .trim()
 }
@@ -89,13 +69,12 @@ function latexToText(raw: string): string {
   s = s.replace(/\_\{([^}]*)\}/g, '_{$1}')
   s = s.replace(/\\sqrt(?:\[([^\]]*)\])?\{([^}]*)\}/g, '√($2)')
   s = s.replace(/\\lim_?\{?([^}]*)\}?/g, 'lim')
-  s = s.replace(/\\int/g, '∫')
-  s = s.replace(/\\sum/g, '∑')
+  s = s.replace(/\\int/g, '∫').replace(/\\sum/g, '∑')
   s = s.replace(/\\(sin|cos|tan|cot|sec|csc|ln|lg|log)/g, '$1')
-  s = s.replace(/\\(alpha|beta|gamma|delta|epsilon|zeta|eta|theta)/g, (_, m) => ({ alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', zeta: 'ζ', eta: 'η', theta: 'θ' })[m] || m)
-  s = s.replace(/\\(pi|rho|sigma|tau|phi|chi|psi|omega)/g, (_, m) => ({ pi: 'π', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω' })[m] || m)
-  s = s.replace(/\\infty/g, '∞')
-  s = s.replace(/\\to|\\rightarrow/g, '→')
+  s = s.replace(/\\alpha|α/g, 'α').replace(/\\beta/g, 'β').replace(/\\gamma/g, 'γ')
+  s = s.replace(/\\delta/g, 'δ').replace(/\\pi/g, 'π').replace(/\\theta/g, 'θ')
+  s = s.replace(/\\phi/g, 'φ').replace(/\\omega/g, 'ω')
+  s = s.replace(/\\infty/g, '∞').replace(/\\to|\\rightarrow/g, '→')
   s = s.replace(/\\partial/g, '∂')
   s = s.replace(/\\neq/g, '≠').replace(/\\geq/g, '≥').replace(/\\leq/g, '≤')
   s = s.replace(/\\times/g, '×').replace(/\\div/g, '÷').replace(/\\pm/g, '±')
@@ -104,177 +83,179 @@ function latexToText(raw: string): string {
   return s.trim()
 }
 
-// ─── 布局引擎 ──────────────────────────────────────────
+// ─── 布局 ──────────────────────────────────────────────
 
-class PdfLayout {
+class Layout {
   readonly doc: PDFDocument
-  page!: PDFPage
-  y!: number
-  pageNum = 1
-  readonly margin: number
-  readonly usableW: number
   readonly font: PDFFont
+  page!: PDFPage  // current page
+  y!: number
+  pageNum = 0
 
-  constructor(doc: PDFDocument, font: PDFFont, margin = 55) {
+  constructor(doc: PDFDocument, font: PDFFont) {
     this.doc = doc
     this.font = font
-    this.margin = margin
-    this.usableW = doc.getPage(0)?.getWidth() || 595 - 2 * margin
-    this.addPage()
+    this.newPage()
   }
 
-  addPage() {
-    this.page = this.doc.addPage([595, 842])
-    this.y = 842 - this.margin
+  newPage() {
+    this.page = this.doc.addPage([PAGE_W, PAGE_H])
+    this.y = PAGE_H - MARGIN_T
     this.pageNum++
-    // 页脚页码
-    this.drawCenter(`— ${this.pageNum} —`, 8)
-    this.y -= 4
   }
 
-  draw(text: string, size = 10, bold = false, indent = 0): void {
-    const x = this.margin + indent
-    this.page.drawText(text, { x, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
-    this.y -= size + 2
+  /** 剩余可用高度 */
+  get usableH() { return this.y - MARGIN_B }
+
+  /** 确保可用高度足够 */
+  ensure(h: number) {
+    if (this.y - h < MARGIN_B) this.newPage()
   }
 
-  drawCenter(text: string, size = 10): void {
-    const tw = this.font.widthOfTextAtSize(text, size)
-    this.page.drawText(text, { x: (595 - tw) / 2, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
-    this.y -= size + 2
+  /** 行间距 */
+  line(h = 16) { this.y -= h }
+
+  /** 单行文本 */
+  text(s: string, size = 10.5, x = MARGIN) {
+    this.page.drawText(s, { x, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
+    this.line(size + 3)
   }
 
-  drawWrap(text: string, size = 10, indent = 0): void {
-    const maxW = this.usableW - indent
-    const lineH = size + 4
-    const chars = [...text]
+  /** 居中 */
+  center(s: string, size = 10.5) {
+    const tw = this.font.widthOfTextAtSize(s, size)
+    this.page.drawText(s, { x: (PAGE_W - tw) / 2, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
+    this.line(size + 3)
+  }
+
+  /** 自动换行（按字符） */
+  wrap(s: string, size = 10.5, indent = 0) {
+    if (!s) return
+    const maxW = PAGE_W - 2 * MARGIN - indent
+    const lh = size + 4
+    const cs = [...s]
     let buf = ''
-    for (const ch of chars) {
-      if (this.font.widthOfTextAtSize(buf + ch, size) > maxW && buf) {
-        this.ensureLine(lineH)
-        this.page.drawText(buf, { x: this.margin + indent, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
-        this.y -= lineH
-        buf = ch
-      } else {
-        buf += ch
-      }
+    for (const c of cs) {
+      if (this.font.widthOfTextAtSize(buf + c, size) > maxW && buf) {
+        this.ensure(lh)
+        this.page.drawText(buf, { x: MARGIN + indent, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
+        this.y -= lh
+        buf = c
+      } else { buf += c }
     }
     if (buf) {
-      this.ensureLine(lineH)
-      this.page.drawText(buf, { x: this.margin + indent, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
-      this.y -= lineH
+      this.ensure(lh)
+      this.page.drawText(buf, { x: MARGIN + indent, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
+      this.y -= lh
     }
   }
 
-  /** 标题装饰条 */
-  drawTitleBar(text: string) {
-    this.draw('─'.repeat(56), 8)
-    this.draw(`  ${text}`, 13, true, 0)
-    this.draw('─'.repeat(56), 8)
+  /** 横线 */
+  lineHr() {
+    this.page.drawLine({
+      start: { x: MARGIN, y: this.y },
+      end: { x: PAGE_W - MARGIN, y: this.y },
+      thickness: 0.6,
+      color: rgb(0.6, 0.6, 0.6),
+    })
+    this.y -= 6
   }
-
-  ensure(h: number) { if (this.y < this.margin + h) this.addPage() }
-  ensureLine(h: number) { if (this.y < this.margin + h) this.addPage() }
-  space(h = 6) { this.y -= h }
 }
 
-// ─── 构建 PDF ──────────────────────────────────────────
+// ─── 构建 ──────────────────────────────────────────────
 
-async function buildPdfDoc(
-  paper: Paper, plan: Plan,
-  questions: Question[],
-  bookName: string, subjectName: string,
-  sourceMode: 'chapter' | 'page',
-) {
+async function buildDoc(opts: PdfOptions) {
   const doc = await PDFDocument.create()
-
-  // 加载字体（本地优先）
-  const fontBytes = await fetchFontBytes()
-  let font: PDFFont
-  let hasCJK = false
-
-  if (fontBytes) {
-    // Dynamic import fontkit to keep main bundle small
-    const fontkit = await import('@pdf-lib/fontkit').then(m => m.default)
-    doc.registerFontkit(fontkit)
-    font = await doc.embedFont(fontBytes)
-    hasCJK = true
-  } else {
-    // 所有字体都失败 → 先创建一个带错误信息的 page，返回部分内容
-    const fallbackPage = doc.addPage([595, 842])
-    fallbackPage.drawText('PDF generation failed: Chinese font could not be loaded.', { x: 50, y: 400, size: 14, color: rgb(0.8, 0.2, 0.2) })
-    fallbackPage.drawText('Please check network connection and try again.', { x: 50, y: 380, size: 12, color: rgb(0.5, 0.5, 0.5) })
+  const fontBytes = await fetchFont()
+  if (!fontBytes) {
+    const p = doc.addPage([PAGE_W, PAGE_H])
+    p.drawText('字体加载失败，请检查网络后重试', { x: 100, y: 420, size: 16, color: rgb(0.8, 0.2, 0.2) })
     return doc
   }
 
-  const MARGIN = 50
-  const ctx = new PdfLayout(doc, font, MARGIN)
+  const fontkit = await import('@pdf-lib/fontkit').then(m => m.default)
+  doc.registerFontkit(fontkit)
+  const font = await doc.embedFont(fontBytes)
+  const ctx = new Layout(doc, font)
 
-  // ========== 封面 ==========
+  // ===== 封面 =====
   {
-    ctx.y = 842 * 0.35
-    ctx.drawCenter('考研数学智能组卷', 26)
-    ctx.space(4)
-    ctx.drawCenter('—— 模拟试卷 ——', 14)
-    ctx.space(24)
-    ctx.drawCenter('─'.repeat(40), 8)
-    ctx.space(16)
-    ctx.drawCenter(`数学类别：${subjectName}`, 13)
-    ctx.drawCenter(`题库名称：${bookName}`, 13)
-    ctx.drawCenter(`方案名称：${plan.name}`, 13)
-    ctx.drawCenter(`试卷编号：${paper.name}`, 13)
-    ctx.drawCenter(`生成时间：${new Date(paper.createdAt).toLocaleString('zh-CN')}`, 11)
-    ctx.space(14)
-    const { choice, blank, answer } = paper.config
-    ctx.drawCenter(`选择题 ${choice} 道 | 填空题 ${blank} 道 | 解答题 ${answer} 道`, 11)
-    ctx.drawCenter(`共 ${questions.length} 题`, 11)
+    ctx.y = PAGE_H * 0.36
+    ctx.center('2027 考研数学', 28)
+    ctx.line(6)
+    ctx.center('模拟试卷', 22)
+    ctx.line(30)
+    ctx.lineHr()
+    ctx.line(16)
+    ctx.center(`数学类别：${opts.subjectName}`, 13)
+    ctx.center(`方案名称：${opts.plan.name}`, 13)
+    ctx.center(`试卷编号：${opts.paper.name}`, 13)
+    ctx.center(`生成时间：${new Date(opts.paper.createdAt).toLocaleString('zh-CN')}`, 11)
+    ctx.line(14)
+    const { choice, blank, answer } = opts.paper.config
+    ctx.center(`一、选择题 ${choice} 道  二、填空题 ${blank} 道  三、解答题 ${answer} 道`, 11)
+    ctx.center(`共计 ${opts.questions.length} 题`, 11)
   }
 
-  // ========== 试题部分 ==========
-  const typeOrder = ['choice', 'blank', 'answer'] as const
-  let globalIdx = 0
+  // ===== 试题 =====
+  const SECTION = [
+    { type: 'choice' as const, num: '一', label: '选择题' },
+    { type: 'blank' as const, num: '二', label: '填空题' },
+    { type: 'answer' as const, num: '三', label: '解答题' },
+  ] as const
 
-  for (const type of typeOrder) {
-    const qs = questions.filter(q => q.type === type)
+  let globalNo = 0  // 题目序号（全局）
+
+  for (const sec of SECTION) {
+    const qs = opts.questions.filter(q => q.type === sec.type)
     if (!qs.length) continue
 
-    ctx.ensure(70)
-    ctx.space(8)
-    ctx.drawTitleBar(`${TYPE_LABELS[type]}（共${qs.length}题）`)
-    ctx.space(12)
+    ctx.ensure(30)
+    ctx.line(8)
+
+    // 题型标题（如：一、选择题（共10题））
+    ctx.text(`${sec.num}、${sec.label}（共${qs.length}题）`, 14, MARGIN)
+    ctx.line(4)
 
     for (const q of qs) {
-      globalIdx++
-      ctx.ensure(60)
-
-      ctx.draw(
-        `第${globalIdx}题  [${sourceMode === 'chapter' ? q.sectionName + ' · 第' + q.chapter + '章' : 'P' + q.page}]`,
-        9, true, 4
-      )
-      ctx.space(2)
+      globalNo++
+      ctx.ensure(24)
 
       const content = latexToText(q.content)
       const lines = content.split('\n').map(l => l.trim()).filter(Boolean)
 
+      // 题目内容
+      let firstLine = true
       for (const line of lines) {
-        ctx.drawWrap(line, 10, 6)
+        if (firstLine) {
+          // 第一行带编号
+          ctx.wrap(line, 10.5, 0)
+          firstLine = false
+        } else {
+          ctx.wrap(line, 10.5, 22)
+        }
       }
-      ctx.space(10)
+      ctx.line(2)
+
+      // 选择题：选项独立成行
+      if (q.type === 'choice') {
+        const opts = content.match(/[A-D][.、）)]\s*.+/g)
+        if (opts) {
+          for (const o of opts) {
+            ctx.wrap(o.trim(), 10.5, 28)
+          }
+          ctx.line(2)
+        }
+      }
+
+      // 解答题留空
+      if (q.type === 'answer') {
+        ctx.ensure(40)
+        ctx.line(30)
+      }
+
+      ctx.line(4)
     }
-  }
-
-  // ========== 来源清单 ==========
-  ctx.ensure(70)
-  ctx.space(4)
-  ctx.drawTitleBar(`题目来源（共${questions.length}题）`)
-  ctx.space(8)
-
-  for (const q of questions) {
-    ctx.ensure(14)
-    const src = sourceMode === 'chapter'
-      ? `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题(P${q.page})]`
-      : `[P${q.page} · 第${q.questionNumber}题]`
-    ctx.drawWrap(`${q.id.slice(-12)}: ${src}`, 8, 4)
   }
 
   return doc
@@ -283,7 +264,7 @@ async function buildPdfDoc(
 // ─── 导出 ──────────────────────────────────────────────
 
 export async function previewPdf(opts: PdfOptions): Promise<string> {
-  const doc = await buildPdfDoc(opts.paper, opts.plan, opts.questions, opts.bookName, opts.subjectName, opts.sourceMode)
+  const doc = await buildDoc(opts)
   const bytes = await doc.save()
   return URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
 }
