@@ -899,18 +899,9 @@ $$
 $$
 
 (2) 设 $A = \begin{pmatrix} 1 & 2 & 3 \end{pmatrix}$ 与 $B = \begin{pmatrix} 2 & 3 & 1 \end{pmatrix}$ 合同，则合同变换矩阵 $P = (\quad)$ .
-
-$$
-\left( \begin{array}{c c c} 0 & 0 & 1 \\ 1 & 0 & 0 \\ 0 & 1 & 0 \end{array} \right)
-$$
-
-$$
-\left( \begin{array}{c c c} 0 & 1 & 0 \\ 1 & 0 & 0 \\ 0 & 0 & 1 \end{array} \right)
-$$
-
-$$
-\left( \begin{array}{c c c} 0 & 0 & 1 \\ 1 & 0 & 0 \\ 0 & 0 & 1 \end{array} \right)
-$$
+A. $\begin{pmatrix} 0 & 0 & 1 \\ 1 & 0 & 0 \\ 0 & 1 & 0 \end{pmatrix}$
+B. $\begin{pmatrix} 0 & 1 & 0 \\ 1 & 0 & 0 \\ 0 & 0 & 1 \end{pmatrix}$
+C. $\begin{pmatrix} 0 & 0 & 1 \\ 1 & 0 & 0 \\ 0 & 0 & 1 \end{pmatrix}$
 
 (3) 设 A 是 n 阶方阵，将 A 的第 i 列与第 j 列互换，再交换第 i 行与第 j 行得到 B，则（）
 A. A 与 B 等价、相似且合同
