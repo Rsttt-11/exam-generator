@@ -6,7 +6,7 @@
  */
 
 import { PDFDocument, rgb } from 'pdf-lib'
-import type { PDFFont } from 'pdf-lib'
+import type { PDFFont, PDFPage } from 'pdf-lib'
 import type { Question, Paper, Plan } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { reflowQuestion, splitToLines } from './reflow'
@@ -52,15 +52,15 @@ async function fetchFont(): Promise<Uint8Array | null> {
 function renderText(raw: string): string {
   if (!raw) return ''
   return raw
-    .replace(/\u{F0EE}/g, '(').replace(/\u{F0CB}/g, '[')
-    .replace(/\u{F0ED}/g, '[').replace(/\u{F0EA}/g, ']')
-    .replace(/\u{F0EC}/g, '(').replace(/\u{F0EB}/g, ')')
-    .replace(/[\u{F0F4}\u{F0F6}\u{F0E2}]/g, '|')
-    .replace(/\u{F0B6}/g, '∫').replace(/\u{F0B1}/g, '∑')
-    .replace(/[\u{F0E8}\u{F0E0}\u{F0E3}]/g, '{')
-    .replace(/[\u{F0E9}\u{F0E1}\u{F0E4}]/g, '}')
-    .replace(/\u{F0DC}/g, '[').replace(/\u{F0B7}/g, '·').replace(/\u{F092}/g, '→')
-    .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/g, '')
+    .replace(/\u{F0EE}/gu, '(').replace(/\u{F0CB}/gu, '[')
+    .replace(/\u{F0ED}/gu, '[').replace(/\u{F0EA}/gu, ']')
+    .replace(/\u{F0EC}/gu, '(').replace(/\u{F0EB}/gu, ')')
+    .replace(/[\u{F0F4}\u{F0F6}\u{F0E2}]/gu, '|')
+    .replace(/\u{F0B6}/gu, '∫').replace(/\u{F0B1}/gu, '∑')
+    .replace(/[\u{F0E8}\u{F0E0}\u{F0E3}]/gu, '{')
+    .replace(/[\u{F0E9}\u{F0E1}\u{F0E4}]/gu, '}')
+    .replace(/\u{F0DC}/gu, '[').replace(/\u{F0B7}/gu, '·').replace(/\u{F092}/gu, '→')
+    .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
     .trim()
 }
 
@@ -279,7 +279,7 @@ async function buildDoc(opts: PdfOptions) {
 export async function previewPdf(opts: PdfOptions): Promise<string> {
   const doc = await buildDoc(opts)
   const bytes = await doc.save()
-  return URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
+  return URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
 }
 
 export async function downloadPdf(opts: PdfOptions) {

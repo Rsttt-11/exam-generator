@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import { usePlanStore } from '@/stores/plan'
@@ -8,8 +8,8 @@ import { useSettingsStore } from '@/stores/settings'
 import { useQuestionBank } from '@/composables/useQuestionBank'
 import { generateExam } from '@/utils/examGenerator'
 import { renderQuestionContent } from '@/utils/contentRender'
-import { reflowQuestion, splitToLines } from '@/utils/reflow'
-import type { ExamConfig, Question, Plan, Category } from '@/types'
+import { reflowQuestion } from '@/utils/reflow'
+import type { ExamConfig, Question, Plan } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { db } from '@/utils/db'
 import { ElMessage } from 'element-plus'
@@ -63,8 +63,6 @@ const allCategoriesSelected = computed(() => {
     cat.chapters.every(chId => config.value.chapters.includes(chId))
   )
 })
-
-const someCategoriesSelected = computed(() => config.value.chapters.length > 0 && !allCategoriesSelected.value)
 
 function toggleAllCategories() {
   if (allCategoriesSelected.value) {

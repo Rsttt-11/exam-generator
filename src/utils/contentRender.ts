@@ -8,29 +8,29 @@ export function renderQuestionContent(raw: string): string {
   if (!raw) return ''
   return raw
     // PUA 成对括号
-    .replace(/\u{F0EE}/g, '(')   // 
-    .replace(/\u{F0CB}/g, '[')   // 
+    .replace(/\u{F0EE}/gu, '(')   // 
+    .replace(/\u{F0CB}/gu, '[')   // 
     // PUA 一对一映射
-    .replace(/\u{F0ED}/g, '[')   // 
-    .replace(/\u{F0EA}/g, ']')   // 
-    .replace(/\u{F0EC}/g, '(')   // 
-    .replace(/\u{F0EB}/g, ')')   // 
-    .replace(/\u{F0F4}/g, '|')   // 
-    .replace(/\u{F0F6}/g, '|')   // 
-    .replace(/\u{F0E2}/g, '|')   // 
-    .replace(/\u{F0B6}/g, '∫')   // 
-    .replace(/\u{F0B1}/g, '∑')   // 
-    .replace(/\u{F0E8}/g, '{')   // 
-    .replace(/\u{F0E9}/g, '}')   // 
-    .replace(/\u{F0E0}/g, '{')   // 
-    .replace(/\u{F0E1}/g, '}')   // 
-    .replace(/\u{F0E3}/g, '{')   // 
-    .replace(/\u{F0E4}/g, '}')   // 
-    .replace(/\u{F0DC}/g, '[')   // 
-    .replace(/\u{F0B7}/g, '·')   // 
-    .replace(/\u{F092}/g, '→')   // 
-    // 直接删除的字符
-    .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/g, '')
+    .replace(/\u{F0ED}/gu, '[')   // 
+    .replace(/\u{F0EA}/gu, ']')   // 
+    .replace(/\u{F0EC}/gu, '(')   // 
+    .replace(/\u{F0EB}/gu, ')')   // 
+    .replace(/\u{F0F4}/gu, '|')   // 
+    .replace(/\u{F0F6}/gu, '|')   // 
+    .replace(/\u{F0E2}/gu, '|')   // 
+    .replace(/\u{F0B6}/gu, '∫')   // 
+    .replace(/\u{F0B1}/gu, '∑')   // 
+    .replace(/\u{F0E8}/gu, '{')   // 
+    .replace(/\u{F0E9}/gu, '}')   // 
+    .replace(/\u{F0E0}/gu, '{')   // 
+    .replace(/\u{F0E1}/gu, '}')   // 
+    .replace(/\u{F0E3}/gu, '{')   // 
+    .replace(/\u{F0E4}/gu, '}')   // 
+    .replace(/\u{F0DC}/gu, '[')   // 
+    .replace(/\u{F0B7}/gu, '·')   // 
+    .replace(/\u{F092}/gu, '→')   // 
+    // 直接删除的字符（含 PUA 空隙 chars）
+    .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
     .trim()
 }
 

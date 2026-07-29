@@ -47,16 +47,16 @@
   ],
   "sections": [
     {
-      "id": "basic",
-      "name": "基础篇"
+      "id": "基础",
+      "name": "基础题"
     },
     {
-      "id": "comprehensive",
-      "name": "综合篇"
+      "id": "综合",
+      "name": "综合题"
     },
     {
-      "id": "advanced",
-      "name": "拓展篇"
+      "id": "拓展",
+      "name": "拓展题"
     }
   ],
   "chapters": [

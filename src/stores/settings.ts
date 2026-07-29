@@ -47,8 +47,6 @@ export const useSettingsStore = defineStore('settings', () => {
     await saveSettings()
   }
 
-  let themeMedia: MediaQueryList | null = null
-
   function applyTheme() {
     const t = settings.value.theme
     if (t === 'dark') {
