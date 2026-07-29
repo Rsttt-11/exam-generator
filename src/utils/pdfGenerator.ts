@@ -17,7 +17,7 @@
 import type { Question, Paper, Plan } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { reflowQuestion, splitToLines } from './reflow'
-import { toLatex } from './latexConverter'
+import { toLatex, cleanPua } from './latexConverter'
 
 export interface PdfOptions {
   paper: Paper
@@ -166,9 +166,16 @@ function renderMixedLine(line: string): string {
 
 // ─── 题目 → HTML ───────────────────────────────────────
 
-function renderQuestion(q: Question, globalNo: number): string {
-  const cleaned = toLatex(q.content)
-  const reflowed = reflowQuestion(cleaned)
+/**
+ * 智能渲染：Markdown 模式直接传透 LaTeX，JSON 模式自动转换
+ */
+function renderQuestion(q: Question, globalNo: number, isLaTeX?: boolean): string {
+  let rawContent = isLaTeX ? q.content : toLatex(q.content)
+  // 清理可能的 PUA 残留
+  if (!isLaTeX) {
+    rawContent = cleanPua(rawContent)
+  }
+  const reflowed = reflowQuestion(rawContent)
   const lines = splitToLines(reflowed)
   let html = '<div class="question-block">'
 
@@ -260,7 +267,9 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
 
     for (const q of qs) {
       globalNo++
-      body += renderQuestion(q, globalNo)
+      // 检测内容是否已包含 LaTeX（$...$ 标记）
+      const isLaTeX = /\$[^$]*\$/.test(q.content)
+      body += renderQuestion(q, globalNo, isLaTeX)
     }
   }
 
