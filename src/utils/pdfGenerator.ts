@@ -154,18 +154,30 @@ function cleanContent(raw: string): string {
 /**
  * 拆分选项后的题号：MinerU 经常会写成
  *   D. $\lim_{x\to\infty}f(x)=1$ (4) 设当 $x\to+\infty$ 时...
- * 需要在 (4) 前插入换行
- * 同时也拆分选项内部：A. xxx B. xxx → 多行
+ *   或  A. 选项 B. 选项 C. 选项 D. 选项(7)下一题
+ * 需要在每个选项前断行，并在题号前断行
  */
 function splitOptionsAndQuestions(line: string): string[] {
-  // Step 1: 把 A.xxx B.xxx C.xxx D.xxx 拆成多行
-  // 只在有多个选项同行时拆分，避免破坏已换行的选项
-  const optBreak = line.replace(/\s+(?=[A-D]\s*[.、）)])(?![^$]*\$)/g, '\n')
+  let s = line
+
+  // Step 1: 在任何 A. B. C. D. 选项前断行（注意不要在 $ 数学模式内触发）
+  const parts = s.split(/(\$[^$]*\$)/g)
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      // 在文本部分（非数学模式）的 A. B. C. D. 前断行
+      parts[i] = parts[i].replace(/\s+(?=[A-D]\s*[.、）)])/g, '\n')
+    }
+  }
+  s = parts.join('')
 
   // Step 2: 如果 D 选项行包含题号（(N)），断开
-  const withQuestionBreak = optBreak.replace(/(D\..*?)\s*\((\d+)\)\s*/g, '$1\n\n($2) ')
+  s = s.replace(/([Dd]\.\s*[^$]*?)\s*\((\d+)\)(\s*)/g, '$1\n\n($2) ')
 
-  return withQuestionBreak.split('\n').map(s => s.trim()).filter(Boolean)
+  // Step 3: 如果数字选项挤在一起 A.xx B.xx 中间没有换行时强制拆分
+  const result = s.split('\n').map(l => l.trim()).filter(Boolean)
+
+  // Step 4: 把行首和行尾的空格清理掉
+  return result
 }
 
 function renderMixedLine(line: string): string {
