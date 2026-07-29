@@ -1,15 +1,23 @@
 /**
- * PDF 生成器 v4 — 考卷排版
- * - 真实试卷布局：一、选择题 → 二、填空题 → 三、解答题
- * - 去除来源 ID 代码
- * - 紧凑美观排版
+ * PDF 生成器 v5 — HTML + KaTeX 专业考卷排版
+ *
+ * 生成包含 KaTeX 渲染数学公式的 HTML 页面（在 iframe 或新标签中打开），
+ * 通过浏览器打印（Ctrl+P）导出为高质量 PDF。
+ *
+ * KaTeX 在预览页面中通过 CDN 按需加载（不增加应用主包体积）。
+ *
+ * 排版标准：
+ * - A4 纸张，仿正式考卷版式
+ * - 三大题型分板块：一、选择题 / 二、填空题 / 三、解答题
+ * - 全局连续题号
+ * - 公式使用 KaTeX 渲染（支持积分/极限/矩阵/分式等）
+ * - 末尾保留题目来源表
  */
 
-import { PDFDocument, rgb } from 'pdf-lib'
-import type { PDFFont, PDFPage } from 'pdf-lib'
 import type { Question, Paper, Plan } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { reflowQuestion, splitToLines } from './reflow'
+import { toLatex } from './latexConverter'
 
 export interface PdfOptions {
   paper: Paper
@@ -20,273 +28,341 @@ export interface PdfOptions {
   sourceMode: 'chapter' | 'page'
 }
 
-const PAGE_W = 595, PAGE_H = 842 // A4
-const MARGIN = 58  // 左右
-const MARGIN_T = 50  // 上
-const MARGIN_B = 40  // 下
+// ─── 样式模板 ──────────────────────────────────────────
 
-// ─── 字体 ──────────────────────────────────────────────
-
-const FONT_URLS = [
-  './fonts/SourceHanSansCN-Regular.otf',
-  'https://cdn.jsdelivr.net/gh/adobe-fonts/source-han-sans@release/SubsetOTF/CN/SourceHanSansCN-Regular.otf',
-]
-
-let fontCache: Uint8Array | null = null
-
-async function fetchFont(): Promise<Uint8Array | null> {
-  if (fontCache) return fontCache
-  for (const url of FONT_URLS) {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(12000) })
-      if (!res.ok) continue
-      const bytes = new Uint8Array(await res.arrayBuffer())
-      if (bytes.length > 1000) { fontCache = bytes; return bytes }
-    } catch { /* next */ }
-  }
-  return null
+const STYLE = `
+@page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+@media print {
+  html, body { width: 210mm; }
+  body { margin: 0; padding: 0; }
+}
+* { box-sizing: border-box; }
+body {
+  font-family: "Source Han Sans CN", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #000;
+  padding: 0;
+  margin: 0;
 }
 
-// ─── 内容渲染 ──────────────────────────────────────────
-
-function renderText(raw: string): string {
-  if (!raw) return ''
-  return raw
-    .replace(/\u{F0EE}/gu, '(').replace(/\u{F0CB}/gu, '[')
-    .replace(/\u{F0ED}/gu, '[').replace(/\u{F0EA}/gu, ']')
-    .replace(/\u{F0EC}/gu, '(').replace(/\u{F0EB}/gu, ')')
-    .replace(/[\u{F0F4}\u{F0F6}\u{F0E2}]/gu, '|')
-    .replace(/\u{F0B6}/gu, '∫').replace(/\u{F0B1}/gu, '∑')
-    .replace(/[\u{F0E8}\u{F0E0}\u{F0E3}]/gu, '{')
-    .replace(/[\u{F0E9}\u{F0E1}\u{F0E4}]/gu, '}')
-    .replace(/\u{F0DC}/gu, '[').replace(/\u{F0B7}/gu, '·').replace(/\u{F092}/gu, '→')
-    .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
-    .trim()
+/* 封面 */
+.exam-header {
+  text-align: center;
+  margin: 40px 0 24px 0;
+}
+.exam-title {
+  font-size: 26pt;
+  font-weight: bold;
+  letter-spacing: 4px;
+  margin-bottom: 6px;
+}
+.exam-subtitle {
+  font-size: 20pt;
+  font-weight: bold;
+  margin-bottom: 14px;
+  color: #222;
+}
+.exam-divider {
+  border: none;
+  border-top: 2px solid #333;
+  margin: 8px auto 16px auto;
+  width: 80%;
+}
+.exam-meta {
+  font-size: 11pt;
+  line-height: 2.2;
+}
+.exam-summary {
+  font-size: 10.5pt;
+  margin-top: 10px;
+  color: #333;
 }
 
-function latexToText(raw: string): string {
-  let s = renderText(raw)
-  s = s.replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1)/($2)')
-  s = s.replace(/\^\{([^}]*)\}/g, '^$1')
-  s = s.replace(/\_\{([^}]*)\}/g, '_{$1}')
-  s = s.replace(/\\sqrt(?:\[([^\]]*)\])?\{([^}]*)\}/g, '√($2)')
-  s = s.replace(/\\lim_?\{?([^}]*)\}?/g, 'lim')
-  s = s.replace(/\\int/g, '∫').replace(/\\sum/g, '∑')
-  s = s.replace(/\\(sin|cos|tan|cot|sec|csc|ln|lg|log)/g, '$1')
-  s = s.replace(/\\alpha|α/g, 'α').replace(/\\beta/g, 'β').replace(/\\gamma/g, 'γ')
-  s = s.replace(/\\delta/g, 'δ').replace(/\\pi/g, 'π').replace(/\\theta/g, 'θ')
-  s = s.replace(/\\phi/g, 'φ').replace(/\\omega/g, 'ω')
-  s = s.replace(/\\infty/g, '∞').replace(/\\to|\\rightarrow/g, '→')
-  s = s.replace(/\\partial/g, '∂')
-  s = s.replace(/\\neq/g, '≠').replace(/\\geq/g, '≥').replace(/\\leq/g, '≤')
-  s = s.replace(/\\times/g, '×').replace(/\\div/g, '÷').replace(/\\pm/g, '±')
-  s = s.replace(/\\cdots/g, '…')
-  s = s.replace(/\\([a-zA-Z]+)/g, '$1')
-  return s.trim()
+/* 题型标题 */
+.section-header {
+  font-size: 13pt;
+  font-weight: bold;
+  margin: 28px 0 12px 0;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid #999;
 }
 
-// ─── 布局 ──────────────────────────────────────────────
+/* 题目 */
+.question-block {
+  margin-bottom: 16px;
+  page-break-inside: avoid;
+}
+.question-text {
+  font-size: 11pt;
+  line-height: 1.8;
+}
+.q-number {
+  font-weight: bold;
+  margin-right: 0.3em;
+}
+.option-line {
+  padding-left: 2.2em;
+  font-size: 11pt;
+  line-height: 1.7;
+}
+.content-line {
+  padding-left: 1.2em;
+  font-size: 11pt;
+  line-height: 1.7;
+}
+.answer-space {
+  min-height: 60px;
+}
 
-class Layout {
-  readonly doc: PDFDocument
-  readonly font: PDFFont
-  page!: PDFPage  // current page
-  y!: number
-  pageNum = 0
+/* 来源 */
+.source-section {
+  margin-top: 36px;
+  padding-top: 12px;
+  border-top: 2px solid #666;
+}
+.source-title {
+  font-size: 11pt;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.source-item {
+  font-size: 8.5pt;
+  line-height: 1.7;
+  color: #444;
+  padding-left: 0.5em;
+}
 
-  constructor(doc: PDFDocument, font: PDFFont) {
-    this.doc = doc
-    this.font = font
-    this.newPage()
-  }
+/* KaTeX 调整 */
+.katex { font-size: 1.05em; }
+.katex-display { margin: 0.3em 0; }
 
-  newPage() {
-    this.page = this.doc.addPage([PAGE_W, PAGE_H])
-    this.y = PAGE_H - MARGIN_T
-    this.pageNum++
-  }
+.page-break { page-break-after: always; }
+`
 
-  /** 剩余可用高度 */
-  get usableH() { return this.y - MARGIN_B }
+// ─── 工具 ──────────────────────────────────────────────
 
-  /** 确保可用高度足够 */
-  ensure(h: number) {
-    if (this.y - h < MARGIN_B) this.newPage()
-  }
+function escHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
-  /** 行间距 */
-  line(h = 16) { this.y -= h }
-
-  /** 单行文本 */
-  text(s: string, size = 10.5, x = MARGIN) {
-    this.page.drawText(s, { x, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
-    this.line(size + 3)
-  }
-
-  /** 居中 */
-  center(s: string, size = 10.5) {
-    const tw = this.font.widthOfTextAtSize(s, size)
-    this.page.drawText(s, { x: (PAGE_W - tw) / 2, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
-    this.line(size + 3)
-  }
-
-  /** 自动换行（按字符） */
-  wrap(s: string, size = 10.5, indent = 0) {
-    if (!s) return
-    const maxW = PAGE_W - 2 * MARGIN - indent
-    const lh = size + 4
-    const cs = [...s]
-    let buf = ''
-    for (const c of cs) {
-      if (this.font.widthOfTextAtSize(buf + c, size) > maxW && buf) {
-        this.ensure(lh)
-        this.page.drawText(buf, { x: MARGIN + indent, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
-        this.y -= lh
-        buf = c
-      } else { buf += c }
+/**
+ * 将一行内容中 `$...$` 包裹的片段替换为 KaTeX 渲染容器，
+ * 其他内容保持 HTML 转义文本。
+ */
+function renderMixedLine(line: string): string {
+  if (!line) return ''
+  // 按 $...$ 分割
+  const parts = line.split(/(\$[^$]*\$)/g)
+  return parts.map(part => {
+    if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
+      const inner = part.slice(1, -1)
+      const encoded = encodeURIComponent(inner)
+      return `<span class="katex-html" data-latex="${encoded}">${escHtml(inner)}</span>`
     }
-    if (buf) {
-      this.ensure(lh)
-      this.page.drawText(buf, { x: MARGIN + indent, y: this.y, font: this.font, size, color: rgb(0, 0, 0) })
-      this.y -= lh
+    return escHtml(part)
+  }).join('')
+}
+
+// ─── 题目 → HTML ───────────────────────────────────────
+
+function renderQuestion(q: Question, globalNo: number): string {
+  const cleaned = toLatex(q.content)
+  const reflowed = reflowQuestion(cleaned)
+  const lines = splitToLines(reflowed)
+  let html = '<div class="question-block">'
+
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li]
+    const isOpt = /^[A-D]\s*[.、）)]/.test(line)
+
+    if (li === 0) {
+      html += `<div class="question-text"><span class="q-number">${globalNo}.</span> ${renderMixedLine(line)}</div>`
+    } else if (isOpt) {
+      const optText = line.replace(/^([A-D])\s*[.、）)]\s*/, '$1. ')
+      html += `<div class="option-line">${renderMixedLine(optText)}</div>`
+    } else {
+      html += `<div class="content-line">${renderMixedLine(line)}</div>`
     }
   }
 
-  /** 横线 */
-  lineHr() {
-    this.page.drawLine({
-      start: { x: MARGIN, y: this.y },
-      end: { x: PAGE_W - MARGIN, y: this.y },
-      thickness: 0.6,
-      color: rgb(0.6, 0.6, 0.6),
-    })
-    this.y -= 6
+  html += '</div>'
+
+  if (q.type === 'answer') {
+    html += '<div class="answer-space"></div>'
+  }
+
+  return html
+}
+
+// ─── 内联 KaTeX ───────────────────────────────────────
+
+interface KatexBundles {
+  css: string
+  js: string
+}
+
+let katexBundleCache: KatexBundles | null = null
+
+async function loadKatexBundles(): Promise<KatexBundles | null> {
+  if (katexBundleCache) return katexBundleCache
+  try {
+    // 从 public 目录预编译的 base64 文件读取 KaTeX
+    const resp = await fetch('./katex-base64.json')
+    if (!resp.ok) throw new Error('HTTP ' + resp.status)
+    const data = await resp.json()
+    const bundles: KatexBundles = {
+      css: atob(data.css),
+      js: atob(data.js),
+    }
+    katexBundleCache = bundles
+    return bundles
+  } catch (e) {
+    console.warn('Failed to load KaTeX bundles:', e)
+    return null
   }
 }
 
-// ─── 构建 ──────────────────────────────────────────────
+// ─── 构建完整 HTML ─────────────────────────────────────
 
-async function buildDoc(opts: PdfOptions) {
-  const doc = await PDFDocument.create()
-  const fontBytes = await fetchFont()
-  if (!fontBytes) {
-    const p = doc.addPage([PAGE_W, PAGE_H])
-    p.drawText('字体加载失败，请检查网络后重试', { x: 100, y: 420, size: 16, color: rgb(0.8, 0.2, 0.2) })
-    return doc
-  }
+async function buildHtml(opts: PdfOptions): Promise<string> {
+  const { paper, plan, questions, subjectName } = opts
+  const { choice, blank, answer } = paper.config
 
-  const fontkit = await import('@pdf-lib/fontkit').then(m => m.default)
-  doc.registerFontkit(fontkit)
-  const font = await doc.embedFont(fontBytes)
-  const ctx = new Layout(doc, font)
+  let body = ''
 
-  // ===== 封面 =====
-  {
-    ctx.y = PAGE_H * 0.36
-    ctx.center('2027 考研数学', 28)
-    ctx.line(6)
-    ctx.center('模拟试卷', 22)
-    ctx.line(30)
-    ctx.lineHr()
-    ctx.line(16)
-    ctx.center(`数学类别：${opts.subjectName}`, 13)
-    ctx.center(`方案名称：${opts.plan.name}`, 13)
-    ctx.center(`试卷编号：${opts.paper.name}`, 13)
-    ctx.center(`生成时间：${new Date(opts.paper.createdAt).toLocaleString('zh-CN')}`, 11)
-    ctx.line(14)
-    const { choice, blank, answer } = opts.paper.config
-    ctx.center(`一、选择题 ${choice} 道  二、填空题 ${blank} 道  三、解答题 ${answer} 道`, 11)
-    ctx.center(`共计 ${opts.questions.length} 题`, 11)
-  }
+  // 封面
+  body += '<div class="exam-header">'
+  body += '<div class="exam-title">2027 考研数学</div>'
+  body += '<div class="exam-subtitle">模拟试卷</div>'
+  body += '<hr class="exam-divider">'
+  body += `<div class="exam-meta">数学类别：${escHtml(subjectName)}</div>`
+  body += `<div class="exam-meta">方案名称：${escHtml(plan.name)}</div>`
+  body += `<div class="exam-meta">试卷编号：${escHtml(paper.name)}</div>`
+  body += `<div class="exam-meta">生成时间：${new Date(paper.createdAt).toLocaleString('zh-CN')}</div>`
+  body += `<div class="exam-summary">一、选择题 ${choice} 道　二、填空题 ${blank} 道　三、解答题 ${answer} 道　共计 ${questions.length} 题</div>`
+  body += '</div>'
 
-  // ===== 试题 =====
-  const SECTION = [
+  // 试题
+  const SECTIONS = [
     { type: 'choice' as const, num: '一', label: '选择题' },
     { type: 'blank' as const, num: '二', label: '填空题' },
     { type: 'answer' as const, num: '三', label: '解答题' },
-  ] as const
+  ]
 
-  let globalNo = 0  // 题目序号（全局）
+  let globalNo = 0
 
-  for (const sec of SECTION) {
-    const qs = opts.questions.filter(q => q.type === sec.type)
+  for (const sec of SECTIONS) {
+    const qs = questions.filter(q => q.type === sec.type)
     if (!qs.length) continue
 
-    ctx.ensure(30)
-    ctx.line(8)
-
-    // 题型标题（如：一、选择题（共10题））
-    ctx.text(`${sec.num}、${sec.label}（共${qs.length}题）`, 14, MARGIN)
-    ctx.line(4)
+    body += `<div class="section-header">${sec.num}、${sec.label}（共${qs.length}题）</div>`
 
     for (const q of qs) {
       globalNo++
-      ctx.ensure(24)
-
-      const raw = latexToText(q.content)
-      // 用 reflow 合并断裂行
-      const content = reflowQuestion(raw)
-      const lines = splitToLines(content)
-
-      // 题目内容（第一行带题号）
-      for (let li = 0; li < lines.length; li++) {
-        const line = lines[li]
-        const isOpt = /^[A-D]\s*[.、）)]/.test(line)
-
-        if (isOpt) {
-          // 选项缩进
-          ctx.wrap(line, 10.5, 28)
-        } else if (li === 0) {
-          // 第一行（含题号）
-          ctx.wrap(line, 10.5, 0)
-        } else {
-          // 普通续行
-          ctx.wrap(line, 10.5, 22)
-        }
-      }
-      ctx.line(2)
-
-      // 解答题留空
-      if (q.type === 'answer') {
-        ctx.ensure(40)
-        ctx.line(30)
-      }
-
-      ctx.line(4)
+      body += renderQuestion(q, globalNo)
     }
   }
 
-  // ===== 题目来源（来源清单） =====
-  ctx.ensure(50)
-  ctx.line(10)
-  ctx.center('─'.repeat(40), 8)
-  ctx.text('题目来源', 11)
-  ctx.center('─'.repeat(40), 8)
-  ctx.line(6)
-  for (const q of opts.questions) {
-    ctx.ensure(14)
-    const src = opts.sourceMode === 'chapter'
-      ? `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题(P${q.page})]`
-      : `[P${q.page} · 第${q.questionNumber}题]`
-    ctx.wrap(src, 8, 10)
+  // 来源
+  body += '<div class="source-section">'
+  body += '<div class="source-title">题目来源</div>'
+  questions.forEach((q, idx) => {
+    const src = `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题(P${q.page})]`
+    body += `<div class="source-item">第${idx + 1}题：${escHtml(src)}</div>`
+  })
+  body += '</div>'
+
+  // ─── 内联 KaTeX ───────────────────────────────────────
+  // 预先读取 KaTeX 文件并内联到 HTML 中（iframe/blob URL 无法动态引用外部文件）
+  const katexData = await loadKatexBundles()
+  if (!katexData) {
+    return ''
   }
 
-  return doc
+  // 客户端 KaTeX 渲染脚本
+  const script = `
+  <script>
+  (function() {
+    var css = document.createElement('style');
+    css.textContent = ${JSON.stringify(katexData.css)};
+    document.head.appendChild(css);
+
+    var script = document.createElement('script');
+    script.textContent = ${JSON.stringify(katexData.js)};
+    document.body.appendChild(script);
+
+    var checkKatex = setInterval(function() {
+      if (typeof katex !== 'undefined') {
+        clearInterval(checkKatex);
+        document.querySelectorAll('.katex-html[data-latex]').forEach(function(el) {
+          try {
+            var latex = decodeURIComponent(el.getAttribute('data-latex'));
+            el.outerHTML = katex.renderToString(latex, { throwOnError: false, displayMode: false });
+          } catch(e) {
+            el.style.color = '#c00';
+          }
+        });
+      }
+    }, 50);
+  })();
+  <\/script>`
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>${STYLE}</style>
+<title>${escHtml(plan.name)} - ${escHtml(paper.name)}</title>
+</head>
+<body>
+${body}
+${script}
+</body>
+</html>`
 }
 
-// ─── 导出 ──────────────────────────────────────────────
+// ─── 导出接口 ──────────────────────────────────────────
 
+/**
+ * 预览 PDF（在新标签页中打开可打印的 HTML）
+ */
 export async function previewPdf(opts: PdfOptions): Promise<string> {
-  const doc = await buildDoc(opts)
-  const bytes = await doc.save()
-  return URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+  const html = await buildHtml(opts)
+  if (!html) {
+    return fallbackHtml(opts)
+  }
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  return URL.createObjectURL(blob)
 }
 
+function fallbackHtml(opts: PdfOptions): string {
+  const { plan, paper } = opts
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>${STYLE}</style>
+<title>${escHtml(plan.name)} - ${escHtml(paper.name)}</title></head>
+<body>
+<p style="color:#c00;text-align:center;margin:40px;font-size:14px;">
+公式渲染加载中，请刷新页面或稍后重试</p>
+</body></html>`
+}
+
+/**
+ * 下载 PDF（打开打印对话框）
+ */
 export async function downloadPdf(opts: PdfOptions) {
   const url = await previewPdf(opts)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${opts.plan.name}_${opts.paper.name}.pdf`
-  a.click()
-  URL.revokeObjectURL(url)
+  const w = window.open(url, '_blank')
+  if (w) {
+    const timer = setInterval(() => {
+      try {
+        if (w.document.readyState === 'complete') {
+          clearInterval(timer)
+          setTimeout(() => w.print(), 800)
+        }
+      } catch {}
+    }, 200)
+  }
 }
