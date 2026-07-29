@@ -194,6 +194,13 @@ export function toLatex(raw: string): string {
     let s = raw
       .replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
       .replace(/!\[image\]\([^)]*\)/g, '')
+      // 转换 MinerU 遗留的 HTML 表格标记：<eq>...</eq> → $...$
+      .replace(/<eq>\s*(.*?)\s*<\/eq>/g, (_, inner) => {
+        const cleaned = inner.trim()
+        return cleaned ? `$${cleaned}$` : ''
+      })
+      // 清理其他 HTML 标签（<table>, <tr>, <td> 等）
+      .replace(/<[\/]?(table|tr|td|th|thead|tbody)[^>]*>/g, '')
       .trim()
     // 合并 $$...$$ 跨越换行的块
     s = mergeDisplayMath(s)

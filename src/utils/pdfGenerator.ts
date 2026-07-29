@@ -449,17 +449,25 @@ export async function downloadHtml(opts: PdfOptions) {
 
   // 优先尝试 navigator.share（移动端原生分享 → 可存为 PDF）
   if (navigator.share) {
-    const file = new File([html], `${plan.name}-${paper.name}.html`, { type: 'text/html;charset=utf-8' })
     try {
+      // Blob + File API
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+      const file = new File([blob], `${plan.name}-${paper.name}.html`, { type: 'text/html;charset=utf-8' })
       await navigator.share({ files: [file], title: plan.name })
       return
-    } catch {}
+    } catch (e) {
+      // 用户取消分享或设备不支持 files → 继续降级
+    }
   }
 
-  // 降级：在新标签页直接打开 HTML（移动端可分享 → 打印/PDF）
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-  const w = window.open(URL.createObjectURL(blob), '_blank')
-  if (w) return
-  // 弹窗被拦截：用 data: URI 直接打开
-  window.location.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(html)
+  // 降级：data: URI 下载（兼容所有移动浏览器）
+  // 注意：不改变当前页面地址，用 <a download> 触发下载
+  const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent(html)
+  const a = document.createElement('a')
+  a.href = dataUri
+  a.download = `${plan.name}-${paper.name}.html`
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
 }
