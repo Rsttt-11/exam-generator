@@ -21,23 +21,19 @@ const CN_NUM: Record<string, number> = {
 
 function parseCnNumber(s: string): number | null {
   const trimmed = s.trim()
+  // 直接阿拉伯数字
   if (/^\d+$/.test(trimmed)) return parseInt(trimmed)
-  const m = trimmed.match(/第([一-鿿十百千万零拾佰]+)章/)
-  if (!m) return null
-  const cn = m[1]
+  // 直接查表（一 → 1, 九 → 9）
+  if (CN_NUM[trimmed]) return CN_NUM[trimmed]
+
+  // 组合数字：十一 = 10+1, 二十三 = 2*10+3, 二十 = 2*10
   let result = 0
   let temp = 0
-  for (const ch of cn) {
+  for (const ch of trimmed) {
     if (ch === '十' || ch === '拾') {
       temp = temp === 0 ? 10 : temp * 10
       result += temp
       temp = 0
-    } else if (ch === '百') {
-      temp = temp === 0 ? 100 : temp * 100
-      result += temp
-      temp = 0
-    } else if (ch === '零') {
-      // skip
     } else if (CN_NUM[ch]) {
       temp = CN_NUM[ch]
     }
