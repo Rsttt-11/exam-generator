@@ -42,7 +42,37 @@ function parseCnNumber(s: string): number | null {
   return result || null
 }
 
-// ─── 正则 ──────────────────────────────────────────────
+// ─── 章节页范围（来自原始 PDF 目录） ──────────
+
+const GAOSHU_RANGES: [number, string, number, number][] = [
+  [1, '函数、极限、连续', 2, 23],
+  [2, '一元函数微分学及其应用', 24, 64],
+  [3, '一元函数积分学及其应用', 65, 115],
+  [4, '空间解析几何', 116, 124],
+  [5, '多元函数微分学及其应用', 125, 150],
+  [6, '重积分及其应用', 151, 184],
+  [7, '微分方程及其应用', 185, 210],
+  [8, '无穷级数', 211, 237],
+  [9, '曲线积分与曲面积分', 238, 266],
+]
+
+const GAXIAN_RANGES: [number, string, number, number][] = [
+  [10, '行列式', 1, 13],
+  [11, '矩阵', 14, 29],
+  [12, '向量', 30, 44],
+  [13, '线性方程组', 45, 62],
+  [14, '相似矩阵', 63, 89],
+  [15, '二次型', 90, 119],
+  [16, '随机事件及其概率', 120, 129],
+  [17, '随机变量及其分布', 130, 141],
+  [18, '多维随机变量及其分布', 142, 157],
+  [19, '随机变量的数字特征', 158, 176],
+  [20, '大数定律与中心极限定理', 177, 180],
+  [21, '数理统计的基本概念', 181, 189],
+  [22, '参数估计', 190, 199],
+]
+
+const ALL_RANGES = [...GAOSHU_RANGES, ...GAXIAN_RANGES]
 
 const CHAPTER_RE = /^##\s+第([一二三四五六七八九十百零]+)章\s*(.*)/
 const QUESTION_RE = /^\((\d+)\)\s*(.*)/
@@ -78,6 +108,7 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
   let buf: string[] = []
   let qnum = 0
   let qidCounter = 0
+  let chPageStart = 0
 
   function detectSection(heading: string) {
     const trimmed = heading.replace(/^##\s+/, '').trim()
@@ -116,7 +147,7 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
       chapterName,
       type: curType,
       questionNumber: qnum,
-      page: 0,
+      page: chPageStart,
       content,
       answer: '',
       analysis: '',
@@ -158,6 +189,9 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
         sectionName = '基础题'
         curType = 'choice'
         qidCounter = 0
+        // 查找章节页码
+        const range = ALL_RANGES.find(r => r[0] === chapterId)
+        chPageStart = range ? range[2] : 0
       }
       continue
     }
