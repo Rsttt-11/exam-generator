@@ -408,6 +408,7 @@ function fallbackHtml(opts: PdfOptions): string {
 
 export async function downloadPdf(opts: PdfOptions) {
   const url = await previewPdf(opts)
+  // 桌面端：弹窗打印
   const w = window.open(url, '_blank')
   if (w) {
     const timer = setInterval(() => {
@@ -418,5 +419,24 @@ export async function downloadPdf(opts: PdfOptions) {
         }
       } catch {}
     }, 200)
+  } else {
+    // 移动端/弹窗被拦截：降级为下载 HTML
+    downloadHtml(opts)
   }
+}
+
+/**
+ * 下载为 .html 文件（移动端友好方案）
+ * 手机打开后可用「分享 → 打印为 PDF」导出
+ */
+export async function downloadHtml(opts: PdfOptions) {
+  const { plan, paper } = opts
+  const html = await buildHtml(opts)
+  if (!html) return
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `${plan.name}-${paper.name}.html`
+  a.click()
+  URL.revokeObjectURL(a.href)
 }
