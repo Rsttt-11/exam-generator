@@ -179,9 +179,21 @@ function wrapMathSegments(s: string, _aggressive: boolean): string {
 }
 
 /**
- * 将题目内容转换为 LaTeX 格式（用于 HTML+KaTeX 渲染）
+ * 将题目内容转换为适合 KaTeX 渲染的文本。
+ *
+ * 自动检测模式：
+ * - 如果内容包含 $...$（已有 LaTeX），直接透传（仅清理 PUA 残留）
+ * - 否则做完整 PUA→Unicode→$ 包裹转换
  */
 export function toLatex(raw: string): string {
+  if (!raw) return ''
+  // 检测是否已含 LaTeX
+  const hasLatex = /\$[^$]*\$/.test(raw)
+  if (hasLatex) {
+    // 已有 LaTeX（Markdown 来源），只需清理可能的 PUA 残留
+    return raw.replace(/[\u{F00A}\u{F00B}\u{F00C}\u{F026}\u{F0B8}\u{F0B9}\u{F0BA}\u{200B}]/gu, '')
+  }
+  // 纯文本（JSON 来源），做完整转换
   const cleaned = cleanPua(raw)
   const lines = cleaned.split('\n')
   return lines.map(line => wrapMathInLine(line)).join('\n')

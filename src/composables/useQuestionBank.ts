@@ -71,11 +71,7 @@ export function useQuestionBank() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const text = await res.text()
 
-      const allQs = loadFromMarkdown(text, {
-        subject,
-        book: bookId,
-        chapters: meta.value?.chapters || [],
-      })
+      const allQs = loadFromMarkdown(text, { subject, book: bookId })
 
       return allQs.filter(q => q.chapter === chapterId)
     } catch (e) {
@@ -99,11 +95,7 @@ export function useQuestionBank() {
           const res = await fetch(url)
           if (!res.ok) continue
           const text = await res.text()
-          const qs = loadFromMarkdown(text, {
-            subject,
-            book: bookId,
-            chapters: meta.value.chapters,
-          })
+          const qs = loadFromMarkdown(text, { subject, book: bookId })
           all.push(...qs)
         }
         questions.value = all
