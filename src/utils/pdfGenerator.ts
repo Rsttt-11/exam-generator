@@ -8,6 +8,8 @@
 import { PDFDocument, rgb } from 'pdf-lib'
 import type { PDFFont } from 'pdf-lib'
 import type { Question, Paper, Plan } from '@/types'
+import { TYPE_LABELS } from '@/types'
+import { reflowQuestion, splitToLines } from './reflow'
 
 export interface PdfOptions {
   paper: Paper
@@ -221,32 +223,28 @@ async function buildDoc(opts: PdfOptions) {
       globalNo++
       ctx.ensure(24)
 
-      const content = latexToText(q.content)
-      const lines = content.split('\n').map(l => l.trim()).filter(Boolean)
+      const raw = latexToText(q.content)
+      // 用 reflow 合并断裂行
+      const content = reflowQuestion(raw)
+      const lines = splitToLines(content)
 
-      // 题目内容
-      let firstLine = true
-      for (const line of lines) {
-        if (firstLine) {
-          // 第一行带编号
+      // 题目内容（第一行带题号）
+      for (let li = 0; li < lines.length; li++) {
+        const line = lines[li]
+        const isOpt = /^[A-D]\s*[.、）)]/.test(line)
+
+        if (isOpt) {
+          // 选项缩进
+          ctx.wrap(line, 10.5, 28)
+        } else if (li === 0) {
+          // 第一行（含题号）
           ctx.wrap(line, 10.5, 0)
-          firstLine = false
         } else {
+          // 普通续行
           ctx.wrap(line, 10.5, 22)
         }
       }
       ctx.line(2)
-
-      // 选择题：选项独立成行
-      if (q.type === 'choice') {
-        const opts = content.match(/[A-D][.、）)]\s*.+/g)
-        if (opts) {
-          for (const o of opts) {
-            ctx.wrap(o.trim(), 10.5, 28)
-          }
-          ctx.line(2)
-        }
-      }
 
       // 解答题留空
       if (q.type === 'answer') {
@@ -256,6 +254,21 @@ async function buildDoc(opts: PdfOptions) {
 
       ctx.line(4)
     }
+  }
+
+  // ===== 题目来源（来源清单） =====
+  ctx.ensure(50)
+  ctx.line(10)
+  ctx.center('─'.repeat(40), 8)
+  ctx.text('题目来源', 11)
+  ctx.center('─'.repeat(40), 8)
+  ctx.line(6)
+  for (const q of opts.questions) {
+    ctx.ensure(14)
+    const src = opts.sourceMode === 'chapter'
+      ? `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题(P${q.page})]`
+      : `[P${q.page} · 第${q.questionNumber}题]`
+    ctx.wrap(src, 8, 10)
   }
 
   return doc

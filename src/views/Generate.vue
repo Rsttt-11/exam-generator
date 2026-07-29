@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useQuestionBank } from '@/composables/useQuestionBank'
 import { generateExam } from '@/utils/examGenerator'
 import { renderQuestionContent } from '@/utils/contentRender'
+import { reflowQuestion, splitToLines } from '@/utils/reflow'
 import type { ExamConfig, Question, Plan, Category } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { db } from '@/utils/db'
@@ -319,7 +320,7 @@ function getBookName(id: string) {
                     <span class="q-number">{{ idx + 1 }}</span>
                     <span class="q-source">{{ q.sectionName }} → 第{{ q.chapter }}章 → 第{{ q.questionNumber }}题</span>
                   </div>
-                  <div class="q-content">{{ renderQuestionContent(q.content) }}</div>
+                  <div class="q-content">{{ reflowQuestion(renderQuestionContent(q.content)) }}</div>
                 </div>
               </div>
             </template>
