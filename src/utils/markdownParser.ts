@@ -254,6 +254,8 @@ export function parseMarkdown(content: string, opts: ParseOptions): Question[] {
     // 行首不是 ( 但行中间有 (N)（不在 $...$ 内），说明两题被 MinerU 粘一起了
     if (!trimmed.match(QUESTION_RE)) {
       // 找出 $...$ 之外的 (N) 模式
+      // 使用非捕获的正则来正确分割多个 $...$ 块
+      // [^$]* 不能跨越 $ 边界，所以每个 $...$ 之间是独立的
       const segs = trimmed.split(/(\$[^$]*\$)/g)
       let rebuilt = ''
       let embeddedIdx = -1
