@@ -26,7 +26,7 @@ const dialogVisible = ref(false)
 
 const previewDialogVisible = ref(false)
 const previewLoading = ref(false)
-const previewUrl = ref('')
+const previewHtml = ref('')
 const previewPaperName = ref('')
 
 onMounted(async () => {
@@ -79,14 +79,13 @@ async function handlePreview(paper: Paper) {
   const qMap = new Map(questions.value.map((q) => [q.id, q]))
   const qs = paper.questionIds.map((id) => qMap.get(id)).filter(Boolean) as Question[]
   try {
-    const url = await previewPdf({
+    const html = await previewPdf({
       paper, plan: plan.value!, questions: qs,
       bookName: getBookName(plan.value!.book),
       subjectName: getSubjectName(plan.value!.subject),
       sourceMode: 'chapter',
     })
-    if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
-    previewUrl.value = url
+    previewHtml.value = html
     previewDialogVisible.value = true
   } catch (e) {
     console.error('PDF preview failed:', e)
@@ -192,7 +191,7 @@ function formatDate(iso: string) {
 
     <!-- PDF Preview -->
     <el-dialog v-model="previewDialogVisible" :title="`PDF预览 - ${previewPaperName}`" width="90%" top="3vh" fullscreen destroy-on-close>
-      <iframe v-if="previewUrl" :src="previewUrl" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:8px" />
+      <iframe v-if="previewHtml" :srcdoc="previewHtml" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:8px" />
     </el-dialog>
   </div>
 </template>

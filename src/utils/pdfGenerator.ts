@@ -392,6 +392,13 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
 export async function previewPdf(opts: PdfOptions): Promise<string> {
   const html = await buildHtml(opts)
   if (!html) return fallbackHtml(opts)
+  // 返回完整的 HTML 字符串（移动端用 srcdoc 内嵌）
+  return html
+}
+
+export async function previewPdfUrl(opts: PdfOptions): Promise<string> {
+  const html = await previewPdf(opts)
+  if (!html) return fallbackHtml(opts)
   return URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }))
 }
 
@@ -407,8 +414,17 @@ function fallbackHtml(opts: PdfOptions): string {
 }
 
 export async function downloadPdf(opts: PdfOptions) {
-  const url = await previewPdf(opts)
+  // 检测是否移动端（移动端不支持 window.print，直接下载 HTML）
+  const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  if (isMobile) {
+    await downloadHtml(opts)
+    return
+  }
+
   // 桌面端：弹窗打印
+  const html = await buildHtml(opts)
+  if (!html) return
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }))
   const w = window.open(url, '_blank')
   if (w) {
     const timer = setInterval(() => {
@@ -419,9 +435,6 @@ export async function downloadPdf(opts: PdfOptions) {
         }
       } catch {}
     }, 200)
-  } else {
-    // 移动端/弹窗被拦截：降级为下载 HTML
-    downloadHtml(opts)
   }
 }
 
@@ -433,10 +446,20 @@ export async function downloadHtml(opts: PdfOptions) {
   const { plan, paper } = opts
   const html = await buildHtml(opts)
   if (!html) return
+
+  // 优先尝试 navigator.share（移动端原生分享 → 可存为 PDF）
+  if (navigator.share) {
+    const file = new File([html], `${plan.name}-${paper.name}.html`, { type: 'text/html;charset=utf-8' })
+    try {
+      await navigator.share({ files: [file], title: plan.name })
+      return
+    } catch {}
+  }
+
+  // 降级：在新标签页直接打开 HTML（移动端可分享 → 打印/PDF）
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = `${plan.name}-${paper.name}.html`
-  a.click()
-  URL.revokeObjectURL(a.href)
+  const w = window.open(URL.createObjectURL(blob), '_blank')
+  if (w) return
+  // 弹窗被拦截：用 data: URI 直接打开
+  window.location.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(html)
 }
