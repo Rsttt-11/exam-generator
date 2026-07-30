@@ -80,6 +80,17 @@ function handleReset() {
           <div class="setting-divider" />
           <div class="setting-row">
             <div class="setting-label">
+              <span class="setting-emoji">📑</span>
+              <span>来源排序</span>
+            </div>
+            <el-radio-group v-model="settingsStore.settings.pdfSourceOrder" size="small">
+              <el-radio-button value="questionNumber">按题号</el-radio-button>
+              <el-radio-button value="page">按页码</el-radio-button>
+            </el-radio-group>
+          </div>
+          <div class="setting-divider" />
+          <div class="setting-row">
+            <div class="setting-label">
               <span class="setting-emoji">🔠</span>
               <span>字号</span>
             </div>

@@ -106,6 +106,7 @@ export interface UserSettings {
   defaultBlank: number
   defaultAnswer: number
   pdfSourceMode: 'chapter' | 'page'
+  pdfSourceOrder: 'questionNumber' | 'page'
   pdfFontSize: number
   pdfMargin: number
   theme: 'light' | 'dark' | 'system'

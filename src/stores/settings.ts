@@ -9,6 +9,7 @@ const defaultSettings: UserSettings = {
   defaultBlank: 6,
   defaultAnswer: 8,
   pdfSourceMode: 'chapter',
+  pdfSourceOrder: 'questionNumber',
   pdfFontSize: 10,
   pdfMargin: 50,
   theme: 'system',

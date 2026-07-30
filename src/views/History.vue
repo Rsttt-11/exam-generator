@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores/app'
 import { usePlanStore } from '@/stores/plan'
 import { usePaperStore } from '@/stores/paper'
 import { useQuestionBank } from '@/composables/useQuestionBank'
+import { useSettingsStore } from '@/stores/settings'
 import { downloadPdf, previewPdf } from '@/utils/pdfGenerator'
 import { toPlainText } from '@/utils/latexConverter'
 import type { Paper, Plan, Question } from '@/types'
@@ -17,6 +18,7 @@ const appStore = useAppStore()
 const planStore = usePlanStore()
 const paperStore = usePaperStore()
 const { meta, loadBookMeta, loadAllQuestions, questions } = useQuestionBank()
+const settingsStore = useSettingsStore()
 
 const planId = Number(route.params.planId)
 const plan = ref<Plan | null>(null)
@@ -73,7 +75,8 @@ async function handleExportPdf(paper: Paper) {
       paper, plan: plan.value!, questions: qs,
       bookName: getBookName(plan.value!.book),
       subjectName: getSubjectName(plan.value!.subject),
-      sourceMode: 'chapter',
+      sourceMode: settingsStore.settings.pdfSourceMode,
+      sourceOrder: settingsStore.settings.pdfSourceOrder,
     })
   } catch (e) {
     console.error('PDF export failed:', e)
@@ -94,7 +97,8 @@ async function handlePreview(paper: Paper) {
       paper, plan: plan.value!, questions: qs,
       bookName: getBookName(plan.value!.book),
       subjectName: getSubjectName(plan.value!.subject),
-      sourceMode: 'chapter',
+      sourceMode: settingsStore.settings.pdfSourceMode,
+      sourceOrder: settingsStore.settings.pdfSourceOrder,
     })
     previewHtml.value = html
     previewDialogVisible.value = true
