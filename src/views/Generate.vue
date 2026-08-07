@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import { usePlanStore } from '@/stores/plan'
 import { usePaperStore } from '@/stores/paper'
 import { useSettingsStore } from '@/stores/settings'
 import { useQuestionBank } from '@/composables/useQuestionBank'
-import { generateExam } from '@/utils/examGenerator'
+import { generateExamByCategory } from '@/utils/examGenerator'
 import { toPlainText } from '@/utils/latexConverter'
 import type { ExamConfig, Question, Plan } from '@/types'
 import { TYPE_LABELS } from '@/types'
@@ -34,7 +34,38 @@ const config = ref<ExamConfig>({
   choice: settingsStore.settings.defaultChoice,
   blank: settingsStore.settings.defaultBlank,
   answer: settingsStore.settings.defaultAnswer,
+  categoryCounts: {},
 })
+
+/** 当前选中章节涉及的分类 */
+const activeCategories = computed(() => {
+  if (!meta.value?.categories) return []
+  const selectedChapters = new Set(config.value.chapters)
+  return meta.value.categories.filter(cat =>
+    cat.chapters.some(ch => selectedChapters.has(ch)),
+  )
+})
+
+/** 默认数量：按分类初始化 */
+const DEFAULT_BY_CATEGORY: Record<string, { choice: number; blank: number; answer: number }> = {
+  gaoshu: { choice: 4, blank: 4, answer: 4 },
+  xianshu: { choice: 3, blank: 1, answer: 1 },
+  gailv: { choice: 3, blank: 1, answer: 1 },
+}
+
+/** 切换章节选中时，自动同步 categoryCounts */
+function ensureCategoryCounts() {
+  const catIds = activeCategories.value.map(c => c.id)
+  const current = config.value.categoryCounts || {}
+  const next: Record<string, { choice: number; blank: number; answer: number }> = {}
+  for (const catId of catIds) {
+    next[catId] = current[catId] || DEFAULT_BY_CATEGORY[catId] || { choice: 0, blank: 0, answer: 0 }
+  }
+  config.value.categoryCounts = next
+}
+
+/** 监听章节变化，同步分类计数 */
+watch(() => config.value.chapters, ensureCategoryCounts, { deep: true })
 
 const selectedCategories = ref<string[]>([])
 
@@ -91,28 +122,47 @@ onMounted(async () => {
   }
 })
 
-function getRemainingCount(type: string): number {
+function getRemainingCount(categoryId: string, type: string): number {
   const usedSet = new Set(plan.value?.usedQuestions || [])
   const sectionSet = new Set(config.value.sections)
   const chapterSet = new Set(config.value.chapters)
+  const catChapters = categoryChapters(categoryId)
   return questions.value.filter(
     (q) =>
       q.type === type &&
       sectionSet.has(q.sectionId) &&
       chapterSet.has(q.chapter) &&
+      catChapters.includes(q.chapter) &&
       !usedSet.has(q.id),
   ).length
 }
 
-const totalRemaining = computed(() =>
-  getRemainingCount('choice') + getRemainingCount('blank') + getRemainingCount('answer')
-)
+/** 分类总数 */
+function getCategoryTotal(categoryId: string): number {
+  const counts = config.value.categoryCounts?.[categoryId]
+  if (!counts) return 0
+  return counts.choice + counts.blank + counts.answer
+}
+
+const totalRemaining = computed(() => {
+  let total = 0
+  for (const cat of activeCategories.value) {
+    const id = cat.id
+    total += getRemainingCount(id, 'choice') + getRemainingCount(id, 'blank') + getRemainingCount(id, 'answer')
+  }
+  return total
+})
 
 const hasEnoughQuestions = computed(() => {
-  const c = config.value
-  return getRemainingCount('choice') >= c.choice
-    && getRemainingCount('blank') >= c.blank
-    && getRemainingCount('answer') >= c.answer
+  for (const cat of activeCategories.value) {
+    const id = cat.id
+    const counts = config.value.categoryCounts?.[id]
+    if (!counts) continue
+    if (getRemainingCount(id, 'choice') < counts.choice) return false
+    if (getRemainingCount(id, 'blank') < counts.blank) return false
+    if (getRemainingCount(id, 'answer') < counts.answer) return false
+  }
+  return true
 })
 
 function handleGenerate() {
@@ -122,7 +172,10 @@ function handleGenerate() {
   warnings.value = []
 
   setTimeout(() => {
-    const result = generateExam(questions.value, plan.value!.usedQuestions, config.value)
+    ensureCategoryCounts()
+    const result = generateExamByCategory(
+      questions.value, plan.value!.usedQuestions, config.value, activeCategories.value,
+    )
     generatedPaper.value = result.paper
     warnings.value = result.warnings
 
@@ -233,24 +286,53 @@ function getBookName(id: string) {
           </div>
         </div>
 
-        <!-- Type Counts -->
+        <!-- Type Counts Matrix -->
         <div class="config-section">
           <div class="section-title">题型数量 <span class="section-hint">（共 {{ totalRemaining }} 道可抽）</span></div>
-          <div class="type-grid">
-            <div class="type-card" v-for="t in ([{key:'choice',label:'选择题'},{key:'blank',label:'填空题'},{key:'answer',label:'解答题'}] as const)" :key="t.key">
-              <div class="type-label">{{ t.label }}</div>
-              <el-input-number
-                v-model="config[t.key]"
-                :min="0"
-                :max="50"
-                size="small"
-                :disabled="generating"
-                controls-position="right"
-              />
-              <div class="type-remain">
-                剩余 <strong>{{ getRemainingCount(t.key) }}</strong> 道
+          <div class="type-matrix" v-if="activeCategories.length">
+            <div class="type-matrix-header">
+              <div class="type-matrix-corner">分类 \ 题型</div>
+              <div class="type-matrix-cell header">选择题</div>
+              <div class="type-matrix-cell header">填空题</div>
+              <div class="type-matrix-cell header">解答题</div>
+              <div class="type-matrix-cell header">合计</div>
+            </div>
+            <div class="type-matrix-row" v-for="cat in activeCategories" :key="cat.id">
+              <div class="type-matrix-cell cat-name">{{ cat.name }}</div>
+              <div class="type-matrix-cell">
+                <el-input-number
+                  v-model="config.categoryCounts![cat.id].choice"
+                  :min="0" :max="50" size="small"
+                  :disabled="generating"
+                  controls-position="right"
+                />
+                <div class="type-remain mini">余 {{ getRemainingCount(cat.id, 'choice') }}</div>
+              </div>
+              <div class="type-matrix-cell">
+                <el-input-number
+                  v-model="config.categoryCounts![cat.id].blank"
+                  :min="0" :max="50" size="small"
+                  :disabled="generating"
+                  controls-position="right"
+                />
+                <div class="type-remain mini">余 {{ getRemainingCount(cat.id, 'blank') }}</div>
+              </div>
+              <div class="type-matrix-cell">
+                <el-input-number
+                  v-model="config.categoryCounts![cat.id].answer"
+                  :min="0" :max="50" size="small"
+                  :disabled="generating"
+                  controls-position="right"
+                />
+                <div class="type-remain mini">余 {{ getRemainingCount(cat.id, 'answer') }}</div>
+              </div>
+              <div class="type-matrix-cell total-cell">
+                <span class="total-num">{{ getCategoryTotal(cat.id) }}</span>
               </div>
             </div>
+          </div>
+          <div v-else class="empty-type-matrix">
+            请先选择章节以配置题型数量
           </div>
         </div>
 
@@ -439,23 +521,83 @@ function getBookName(id: string) {
   font-weight: 500;
 }
 
-/* Type Grid */
-.type-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-@media (max-width: 500px) { .type-grid { grid-template-columns: 1fr; } }
-
-.type-card {
-  background: var(--el-fill-color-light);
+/* Type Matrix */
+.type-matrix {
+  border: 1px solid var(--el-border-color-light);
   border-radius: var(--radius-sm);
-  padding: 16px;
-  text-align: center;
+  overflow: hidden;
+}
+.type-matrix-header,
+.type-matrix-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr 0.7fr;
+}
+.type-matrix-header {
+  background: var(--el-fill-color);
+}
+.type-matrix-cell {
+  padding: 8px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
+  border-right: 1px solid var(--el-border-color-light);
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+.type-matrix-cell:last-child {
+  border-right: none;
+}
+.type-matrix-row:last-child .type-matrix-cell {
+  border-bottom: none;
+}
+.type-matrix-cell.header {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  justify-content: center;
+}
+.type-matrix-corner {
+  padding: 8px 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--el-border-color-light);
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+.type-matrix-cell.cat-name {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--el-text-color-primary);
+  justify-content: center;
+}
+.type-matrix-cell.total-cell {
+  justify-content: center;
+}
+.total-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-primary-500);
+}
+.type-remain.mini {
+  font-size: 11px;
+}
+.empty-type-matrix {
+  text-align: center;
+  padding: 24px;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  border: 1px dashed var(--el-border-color);
+  border-radius: var(--radius-sm);
+}
+@media (max-width: 500px) {
+  .type-matrix-header,
+  .type-matrix-row {
+    grid-template-columns: 1fr 1fr 1fr 1fr 0.6fr;
+  }
+  .type-matrix-cell { padding: 6px 4px; }
 }
 .type-label { font-weight: 600; font-size: 14px; color: var(--el-text-color-primary); }
 .type-remain { font-size: 12px; color: var(--el-text-color-secondary); }

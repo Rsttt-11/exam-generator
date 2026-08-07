@@ -80,6 +80,8 @@ export interface ExamConfig {
   choice: number
   blank: number
   answer: number
+  /** 按分类的题型数量：categoryId -> { choice, blank, answer } */
+  categoryCounts?: Record<string, { choice: number; blank: number; answer: number }>
 }
 
 /** 历史试卷 */
