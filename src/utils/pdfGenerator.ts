@@ -358,21 +358,23 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
     }
   }
 
-  // 来源（保留原题页码，从 q.page 获取）
-  // 按试卷题号排序，章节切换时加分隔线
+  // 来源：按章节排序（第1章→第2章→...），章节切换时加分隔线
+  const sortedByChapter = [...questions].sort((a, b) => {
+    if (a.chapter !== b.chapter) return a.chapter - b.chapter
+    return a.questionNumber - b.questionNumber
+  })
   body += '<div class="source-section no-break">'
   body += '<div class="source-title">题目来源</div>'
-  questions.forEach((q, idx) => {
-    // 检查是否需要加分隔线（章节变化时）
+  sortedByChapter.forEach((q, idx) => {
     if (idx > 0) {
-      const prevQ = questions[idx - 1]
+      const prevQ = sortedByChapter[idx - 1]
       if (prevQ.chapter !== q.chapter) {
         body += '<div class="source-divider"></div>'
       }
     }
     const pg = q.page > 0 ? `(P${q.page})` : ''
     const src = `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题${pg}]`
-    body += `<div class="source-item">第${idx + 1}题：${escHtml(src)}</div>`
+    body += `<div class="source-item">${escHtml(src)}</div>`
   })
   body += '</div>'
 

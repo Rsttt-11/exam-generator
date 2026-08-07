@@ -31,10 +31,12 @@ export const usePaperStore = defineStore('paper', () => {
   ): Promise<number | undefined> {
     const planStore = usePlanStore()
     const count = papers.value.length
+    // 超过 3 套就从 1 开始排（1,2,3,1,2,3...）
+    const paperNo = (count % 3) + 1
     const now = new Date().toISOString()
     const paper: Paper = {
       planId,
-      name: `第${count + 1}套`,
+      name: `第${paperNo}套`,
       questionIds,
       config,
       createdAt: now,
