@@ -18,26 +18,22 @@ import type { Question, Paper, Plan } from '@/types'
 import { TYPE_LABELS } from '@/types'
 import { toLatex } from './latexConverter'
 
-/**
- * 按页码排序题目来源表。
- * 高数篇（1-9章）、线概篇（10-22章）是两本书，页码独立，
- * 所以按 category 分组，组内按 page 排序。
- */
-function sortByPage(questions: Question[]): Question[] {
-  // 高数: 1-9, 线代: 10-15, 概率: 16-22
+/* 按页码排序（暂未使用，保留接口）
+function _sortByPage(questions: Question[]): Question[] {
   const categoryOf = (ch: number) => {
-    if (ch <= 9) return 0      // 高数篇
-    if (ch <= 15) return 1     // 线代篇
-    return 2                   // 概率篇
+    if (ch <= 9) return 0
+    if (ch <= 15) return 1
+    return 2
   }
   return [...questions].sort((a, b) => {
     const catA = categoryOf(a.chapter)
     const catB = categoryOf(b.chapter)
-    if (catA !== catB) return catA - catB       // 先按篇排序（高数→线代→概率）
-    if (a.page !== b.page) return a.page - b.page // 篇内按页码
-    return a.questionNumber - b.questionNumber   // 页码相同按题号
+    if (catA !== catB) return catA - catB
+    if (a.page !== b.page) return a.page - b.page
+    return a.questionNumber - b.questionNumber
   })
 }
+*/
 
 export interface PdfOptions {
   paper: Paper
@@ -50,7 +46,7 @@ export interface PdfOptions {
 }
 
 const STYLE = `
-@page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+@page { size: A4; margin: 14mm 12mm 14mm 12mm; }
 @media print {
   html, body { width: 210mm; margin: 0; padding: 0; }
   .no-break { page-break-inside: avoid; }
@@ -147,6 +143,10 @@ body {
   font-size: 8pt;
   line-height: 1.6;
   color: #555;
+}
+.source-divider {
+  border-top: 1px dashed #aaa;
+  margin: 6px 0;
 }
 
 /* KaTeX 调整 */
@@ -320,7 +320,7 @@ async function loadKatexBundles(): Promise<KatexBundles | null> {
 }
 
 async function buildHtml(opts: PdfOptions): Promise<string> {
-  const { paper, plan, questions, subjectName, sourceOrder } = opts
+  const { paper, plan, questions, subjectName } = opts
   const { choice, blank, answer } = paper.config
 
   let body = ''
@@ -359,14 +359,17 @@ async function buildHtml(opts: PdfOptions): Promise<string> {
   }
 
   // 来源（保留原题页码，从 q.page 获取）
-  // pdf 页码不准确（MinerU 输出不含页码），显示章节来源
-  // 排序：按题号（默认）或按页码（高数/线概分别排序）
-  const sortedQuestions = sourceOrder === 'page'
-    ? sortByPage(questions)
-    : questions
+  // 按试卷题号排序，章节切换时加分隔线
   body += '<div class="source-section no-break">'
   body += '<div class="source-title">题目来源</div>'
-  sortedQuestions.forEach((q, idx) => {
+  questions.forEach((q, idx) => {
+    // 检查是否需要加分隔线（章节变化时）
+    if (idx > 0) {
+      const prevQ = questions[idx - 1]
+      if (prevQ.chapter !== q.chapter) {
+        body += '<div class="source-divider"></div>'
+      }
+    }
     const pg = q.page > 0 ? `(P${q.page})` : ''
     const src = `[${q.sectionName} · 第${q.chapter}章 · ${TYPE_LABELS[q.type]} · 第${q.questionNumber}题${pg}]`
     body += `<div class="source-item">第${idx + 1}题：${escHtml(src)}</div>`
